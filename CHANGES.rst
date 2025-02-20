@@ -11,13 +11,13 @@ Features
 
 - SimpleExecutor now have an envvars property, that returns defined envvars with added os.envvars and mirakuru_uuid envvar.
 
-  This will allow to re-use same envvars for starting process and any additional process runs in inheriting executors. (`#842 <https://github.com/ClearcodeHQ/mirakuru/issues/842>`_)
+  This will allow to re-use same envvars for starting process and any additional process runs in inheriting executors. (`#842 <https://github.com/dbfixtures/mirakuru/issues/842>`_)
 
 
 Miscellaneus
 ------------
 
-- `#810 <https://github.com/ClearcodeHQ/mirakuru/issues/810>`_, `#841 <https://github.com/ClearcodeHQ/mirakuru/issues/841>`_
+- `#810 <https://github.com/dbfixtures/mirakuru/issues/810>`_, `#841 <https://github.com/dbfixtures/mirakuru/issues/841>`_
 - Add pytest-rerunfailures for flaky tests.
 - Defer to pytest's tmp_path_factory instead of manual tmpdir setting/detection
 
@@ -40,7 +40,7 @@ Features
 Miscellaneus
 ------------
 
-- `#724 <https://github.com/ClearcodeHQ/mirakuru/issues/724>`_, `#726 <https://github.com/ClearcodeHQ/mirakuru/issues/726>`_, `#742 <https://github.com/ClearcodeHQ/mirakuru/issues/742>`_
+- `#724 <https://github.com/dbfixtures/mirakuru/issues/724>`_, `#726 <https://github.com/dbfixtures/mirakuru/issues/726>`_, `#742 <https://github.com/dbfixtures/mirakuru/issues/742>`_
 - * Extended line-lenght to 100 characters
   * updated test_forgotten_stop as on CI on
     Python 3.13 it lost one character out of the marker
@@ -52,19 +52,19 @@ Miscellaneus
 Breaking changes
 ----------------
 
-- Drop support for Python 3.7 (`#667 <https://github.com/ClearcodeHQ/mirakuru/issues/667>`_)
+- Drop support for Python 3.7 (`#667 <https://github.com/dbfixtures/mirakuru/issues/667>`_)
 
 
 Features
 --------
 
-- Support Python 3.12 (`#685 <https://github.com/ClearcodeHQ/mirakuru/issues/685>`_)
+- Support Python 3.12 (`#685 <https://github.com/dbfixtures/mirakuru/issues/685>`_)
 
 
 Miscellaneus
 ------------
 
-- `#639 <https://github.com/ClearcodeHQ/mirakuru/issues/639>`_, `#653 <https://github.com/ClearcodeHQ/mirakuru/issues/653>`_, `#655 <https://github.com/ClearcodeHQ/mirakuru/issues/655>`_, `#664 <https://github.com/ClearcodeHQ/mirakuru/issues/664>`_, `#686 <https://github.com/ClearcodeHQ/mirakuru/issues/686>`_
+- `#639 <https://github.com/dbfixtures/mirakuru/issues/639>`_, `#653 <https://github.com/dbfixtures/mirakuru/issues/653>`_, `#655 <https://github.com/dbfixtures/mirakuru/issues/655>`_, `#664 <https://github.com/dbfixtures/mirakuru/issues/664>`_, `#686 <https://github.com/dbfixtures/mirakuru/issues/686>`_
 
 
 2.5.1 (2023-02-27)
@@ -73,7 +73,7 @@ Miscellaneus
 Bugfixes
 --------
 
-- Include py.typed to the package published on pypi (`#633 <https://github.com/ClearcodeHQ/mirakuru/issues/633>`_)
+- Include py.typed to the package published on pypi (`#633 <https://github.com/dbfixtures/mirakuru/issues/633>`_)
 
 
 2.5.0 (2023-02-17)
@@ -82,18 +82,18 @@ Bugfixes
 Features
 --------
 
-- Support Python 3.11 (`#617 <https://github.com/ClearcodeHQ/mirakuru/issues/617>`_)
+- Support Python 3.11 (`#617 <https://github.com/dbfixtures/mirakuru/issues/617>`_)
 
 
 Miscellaneus
 ------------
 
-- Reformatted code with black 23 (`#613 <https://github.com/ClearcodeHQ/mirakuru/issues/613>`_)
-- Introduce towncrier as changelog management too. (`#615 <https://github.com/ClearcodeHQ/mirakuru/issues/615>`_)
-- Moved Development dependency management to pipfile/pipenv (`#616 <https://github.com/ClearcodeHQ/mirakuru/issues/616>`_)
-- Move package definition into the pyproject.toml file (`#618 <https://github.com/ClearcodeHQ/mirakuru/issues/618>`_)
-- Use shared automerge flow and github app. (`#619 <https://github.com/ClearcodeHQ/mirakuru/issues/619>`_)
-- Use tbump to manage versioning (`#628 <https://github.com/ClearcodeHQ/mirakuru/issues/628>`_)
+- Reformatted code with black 23 (`#613 <https://github.com/dbfixtures/mirakuru/issues/613>`_)
+- Introduce towncrier as changelog management too. (`#615 <https://github.com/dbfixtures/mirakuru/issues/615>`_)
+- Moved Development dependency management to pipfile/pipenv (`#616 <https://github.com/dbfixtures/mirakuru/issues/616>`_)
+- Move package definition into the pyproject.toml file (`#618 <https://github.com/dbfixtures/mirakuru/issues/618>`_)
+- Use shared automerge flow and github app. (`#619 <https://github.com/dbfixtures/mirakuru/issues/619>`_)
+- Use tbump to manage versioning (`#628 <https://github.com/dbfixtures/mirakuru/issues/628>`_)
 
 
 2.4.2

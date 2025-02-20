@@ -1,4 +1,4 @@
-.. image:: https://raw.githubusercontent.com/ClearcodeHQ/mirakuru/master/logo.png
+.. image:: https://raw.githubusercontent.com/dbfixtures/mirakuru/master/logo.png
     :height: 100px
 
 mirakuru
@@ -271,8 +271,8 @@ Mirakuru encourages methods chaining so you can inline some operations, e.g.:
 Contributing and reporting bugs
 -------------------------------
 
-Source code is available at: `ClearcodeHQ/mirakuru <https://github.com/ClearcodeHQ/mirakuru>`_.
-Issue tracker is located at `GitHub Issues <https://github.com/ClearcodeHQ/mirakuru/issues>`_.
+Source code is available at: `dbfixtures/mirakuru <https://github.com/dbfixtures/mirakuru>`_.
+Issue tracker is located at `GitHub Issues <https://github.com/dbfixtures/mirakuru/issues>`_.
 Projects `PyPI page <https://pypi.python.org/pypi/mirakuru>`_.
 
 Windows support
@@ -284,8 +284,8 @@ However we'd welcome contributions that will allow the windows support.
 
 See:
 
-* `#392 <https://github.com/ClearcodeHQ/mirakuru/issues/392>`_
-* `#336 <https://github.com/ClearcodeHQ/mirakuru/issues/336>`_
+* `#392 <https://github.com/dbfixtures/mirakuru/issues/392>`_
+* `#336 <https://github.com/dbfixtures/mirakuru/issues/336>`_
 
 Also, With the introduction of `WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_
 the need for raw Windows support might not be that urgant... If you've got any thoughts or are willing to contribute,
