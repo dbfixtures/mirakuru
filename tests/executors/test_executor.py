@@ -68,11 +68,9 @@ def test_stop_custom_exit_signal_stop() -> None:
     assert executor.running() is False
 
 
-@pytest.mark.flaky(
-    reruns=5, reruns_delay=1, only_rerun="mirakuru.exceptions.ProcessFinishedWithError"
-)
+@pytest.mark.flaky(reruns=5, reruns_delay=1, only_rerun="ProcessFinishedWithError")
 def test_stop_custom_exit_signal_context() -> None:
-    """Start process and expect custom exit signal in context manager."""
+    """Start a process and expect a custom exit signal in the context manager."""
     with SimpleExecutor("false", expected_returncode=-3, shell=True) as executor:
         executor.stop(stop_signal=signal.SIGQUIT)
         assert executor.running() is False
@@ -88,13 +86,13 @@ def test_running_context() -> None:
 
 
 def test_executor_in_context_only() -> None:
-    """Start process and shuts it down only in context."""
+    """Start a process and shuts it down only in context."""
     with SimpleExecutor(SLEEP_300) as executor:
         assert executor.running() is True
 
 
 def test_context_stopped() -> None:
-    """Start for context, and shuts it for nested context."""
+    """Start for context and shuts it for nested context."""
     executor = SimpleExecutor(SLEEP_300)
     with executor:
         assert executor.running() is True
@@ -110,7 +108,7 @@ ECHO_FOOBAR = 'echo "foobar"'
 
 @pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
 def test_process_output(command: Union[str, List[str]]) -> None:
-    """Start process, check output and shut it down."""
+    """Start a process, check output and shut it down."""
     executor = SimpleExecutor(command)
     executor.start()
 
