@@ -4,14 +4,14 @@ version = "2.6.0"
 description = "Process executor (not only) for tests."
 readme = "README.rst"
 keywords = ["process", "executor", "tests", "orchestration"]
-license = {file = "LICENSE"}
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [
     {name = "Grzegorz Śliwiński", email = "fizyk+pypi@fizyk.dev"}
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
@@ -38,7 +38,7 @@ requires-python = ">= 3.9"
 "Changelog" = "https://github.com/dbfixtures/mirakuru/blob/v2.6.0/CHANGES.rst"
 
 [build-system]
-requires = ["setuptools >= 61.0.0", "wheel"]
+requires = ["setuptools >= 77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
