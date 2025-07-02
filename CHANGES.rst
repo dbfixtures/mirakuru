@@ -3,6 +3,20 @@ CHANGELOG
 
 .. towncrier release notes start
 
+2.6.1 (2025-07-02)
+==================
+
+Miscellaneus
+------------
+
+- Adjust links after repository transfer
+- Adjust workflows for actions-reuse 3.0.0
+- Fix rerunfailures configuration
+- Run tests against oldest supported dependencies.
+- Standardized license field in `pyproject.toml` to use SPDX identifier and avoid deprecation warnings from setuptools.
+- Tests: pick free port instead of hardcoding to 3000
+
+
 2.6.0 (2025-02-07)
 ==================
 

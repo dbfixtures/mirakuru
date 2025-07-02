@@ -1,1 +1,0 @@
-Standardized license field in `pyproject.toml` to use SPDX identifier and avoid deprecation warnings from setuptools.
