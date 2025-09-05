@@ -8,13 +8,13 @@ on:
 
 jobs:
   tests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v3.1.1
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.0.0
     with:
       python-versions: '["3.9", "3.10", "3.11", "3.12", "3.13", "pypy-3.10"]'
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v3.1.1
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.0.0
     needs: [tests]
     with:
       python-versions: '["3.11", "3.12", "3.13", "pypy-3.10"]'
@@ -31,16 +31,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Pipenv on python ${{ matrix.python-version }}
-        uses: fizyk/actions-reuse/.github/actions/pipenv-setup@v3.1.1
+        uses: fizyk/actions-reuse/.github/actions/pipenv-setup@v4.0.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: false
+          allow-prereleases: false
       - name: Install oldest supported versions
-        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v3.1.1
+        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.0.0
         with:
           command: pip install -r oldest-requirements.rq
       - name: Run tests
-        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v3.1.1
+        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.0.0
         with:
           command: pytest -v --cov --cov-report=xml
       - name: Upload coverage to Codecov
