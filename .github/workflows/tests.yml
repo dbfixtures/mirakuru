@@ -18,7 +18,7 @@ jobs:
     needs: [tests]
     with:
       python-versions: '["3.11", "3.12", "3.13", "pypy-3.10"]'
-      os: macos-latest
+      os: macos-14 # macos-latest is on macos-15 which misbehaves
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   oldest:

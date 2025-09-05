@@ -1,0 +1,3 @@
+Downgrade MacOS runner to 14, as the 15 running as macos-latest at the moment is misbehaving.
+
+Tests on PyPy are running fine, while those on regular python vversion constantly fail.
