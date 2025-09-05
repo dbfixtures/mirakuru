@@ -10,14 +10,14 @@ jobs:
   tests:
     uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.0.0
     with:
-      python-versions: '["3.9", "3.10", "3.11", "3.12", "3.13", "pypy-3.10"]'
+      python-versions: '["3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.10"]'
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
     uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.0.0
     needs: [tests]
     with:
-      python-versions: '["3.11", "3.12", "3.13", "pypy-3.10"]'
+      python-versions: '["3.11", "3.12", "3.13", "3.14", "pypy-3.10"]'
       os: macos-14 # macos-latest is on macos-15 which misbehaves
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "pypy-3.10"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.10"]
     steps:
       - uses: actions/checkout@v5
       - name: Set up Pipenv on python ${{ matrix.python-version }}
@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: false
-          allow-prereleases: false
+          allow-prereleases: true
       - name: Install oldest supported versions
         uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.0.0
         with:
