@@ -1,6 +1,6 @@
 """Mirakuru exceptions."""
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from mirakuru.base import SimpleExecutor  # pylint:disable=cyclic-import
@@ -22,7 +22,7 @@ class ExecutorError(Exception):
 class TimeoutExpired(ExecutorError):
     """Is raised when the timeout expires while starting an executor."""
 
-    def __init__(self, executor: "SimpleExecutor", timeout: Union[int, float]) -> None:
+    def __init__(self, executor: "SimpleExecutor", timeout: int | float) -> None:
         """Exception initialization with an extra ``timeout`` argument.
 
         :param mirakuru.base.SimpleExecutor executor: for which exception

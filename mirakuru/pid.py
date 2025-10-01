@@ -18,7 +18,7 @@
 """Pid executor definition."""
 
 import os.path
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from mirakuru.base import Executor
 
@@ -33,7 +33,7 @@ class PidExecutor(Executor):
 
     def __init__(
         self,
-        command: Union[str, List[str], Tuple[str, ...]],
+        command: str | list[str] | tuple[str, ...],
         filename: str,
         **kwargs: Any,
     ) -> None:

@@ -18,7 +18,7 @@
 """TCP executor definition."""
 
 import socket
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from mirakuru.base import Executor
 
@@ -32,7 +32,7 @@ class TCPExecutor(Executor):
 
     def __init__(
         self,
-        command: Union[str, List[str], Tuple[str, ...]],
+        command: str | list[str] | tuple[str, ...],
         host: str,
         port: int,
         **kwargs: Any,

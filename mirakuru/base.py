@@ -33,15 +33,9 @@ from typing import (
     IO,
     Any,
     Callable,
-    Dict,
     Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
     Type,
     TypeVar,
-    Union,
 )
 
 from mirakuru.base_env import processes_with_env
@@ -95,18 +89,18 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
     def __init__(  # pylint:disable=too-many-arguments
         self,
-        command: Union[str, List[str], Tuple[str, ...]],
-        cwd: Optional[str] = None,
+        command: str | list[str] | tuple[str, ...],
+        cwd: str | None = None,
         shell: bool = False,
-        timeout: Union[int, float] = 3600,
+        timeout: int | float = 3600,
         sleep: float = 0.1,
         stop_signal: int = signal.SIGTERM,
         kill_signal: int = SIGKILL,
-        expected_returncode: Optional[int] = None,
-        envvars: Optional[Dict[str, str]] = None,
-        stdin: Union[None, int, IO[Any]] = subprocess.PIPE,
-        stdout: Union[None, int, IO[Any]] = subprocess.PIPE,
-        stderr: Union[None, int, IO[Any]] = None,
+        expected_returncode: int | None = None,
+        envvars: dict[str, str] | None = None,
+        stdin: None | int | IO[Any] = subprocess.PIPE,
+        stdout: None | int | IO[Any] = subprocess.PIPE,
+        stderr: None | int | IO[Any] = None,
     ) -> None:
         """Initialize executor.
 
@@ -165,8 +159,8 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         self._stdout = stdout
         self._stderr = stderr
 
-        self._endtime: Optional[float] = None
-        self.process: Optional[subprocess.Popen] = None
+        self._endtime: float | None = None
+        self.process: subprocess.Popen | None = None
         """A :class:`subprocess.Popen` instance once process is started."""
 
         self._uuid = f"{os.getpid()}:{uuid.uuid4()}"
@@ -181,9 +175,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """Exit context manager stopping the subprocess."""
         self.stop()
@@ -200,7 +194,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         return self.process.poll() is None
 
     @property
-    def envvars(self) -> Dict[str, str]:
+    def envvars(self) -> dict[str, str]:
         """Combines required environment variables with os.environ and mirakuru_uuid."""
         envs = os.environ.copy()
         envs.update(self._envvars)
@@ -218,7 +212,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         return envs
 
     @property
-    def _popen_kwargs(self) -> Dict[str, Any]:
+    def _popen_kwargs(self) -> dict[str, Any]:
         """Get kwargs for the process instance.
 
         .. note::
@@ -228,7 +222,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
         :return:
         """
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
 
         if self._stdin:
             kwargs["stdin"] = self._stdin
@@ -255,7 +249,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         :rtype: SimpleExecutor
         """
         if self.process is None:
-            command: Union[str, List[str], Tuple[str, ...]] = self.command
+            command: str | list[str] | tuple[str, ...] = self.command
             if not self._shell:
                 command = self.command_parts
             LOG.debug("Starting process: %s", command)
@@ -279,7 +273,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
         self._endtime = None
 
-    def _kill_all_kids(self, sig: int) -> Set[int]:
+    def _kill_all_kids(self, sig: int) -> set[int]:
         """Kill all subprocesses (and its subprocesses) that executor started.
 
         This function tries to kill all leftovers in process tree that current
@@ -307,8 +301,8 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
     def stop(
         self: SimpleExecutorType,
-        stop_signal: Optional[int] = None,
-        expected_returncode: Optional[int] = None,
+        stop_signal: int | None = None,
+        expected_returncode: int | None = None,
     ) -> SimpleExecutorType:
         """Stop process running.
 
@@ -387,7 +381,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             self.start()
 
     def kill(
-        self: SimpleExecutorType, wait: bool = True, sig: Optional[int] = None
+        self: SimpleExecutorType, wait: bool = True, sig: int | None = None
     ) -> SimpleExecutorType:
         """Kill the process if running.
 
@@ -409,13 +403,13 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         self._clear_process()
         return self
 
-    def output(self) -> Optional[IO[Any]]:
+    def output(self) -> IO[Any] | None:
         """Return subprocess output."""
         if self.process is not None:
             return self.process.stdout
         return None  # pragma: no cover
 
-    def err_output(self) -> Optional[IO[Any]]:
+    def err_output(self) -> IO[Any] | None:
         """Return subprocess stderr."""
         if self.process is not None:
             return self.process.stderr

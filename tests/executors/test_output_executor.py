@@ -1,5 +1,6 @@
 # mypy: no-strict-optional
 """Output executor test."""
+
 import subprocess
 
 import pytest

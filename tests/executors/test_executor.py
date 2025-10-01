@@ -1,5 +1,6 @@
 # mypy: no-strict-optional
 """Test basic executor functionality."""
+
 import gc
 import shlex
 import signal
@@ -168,9 +169,9 @@ def test_forgotten_stop() -> None:
     executor.start()
     assert executor.running() is True
     ps_output = ps_aux()
-    assert (
-        mark in ps_output
-    ), f"The test command {marked_command} should be running in \n\n {ps_output}."
+    assert mark in ps_output, (
+        f"The test command {marked_command} should be running in \n\n {ps_output}."
+    )
     del executor
     gc.collect()  # to force 'del' immediate effect
     assert mark not in ps_aux(), "The test process should not be running at this point."
