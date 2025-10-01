@@ -330,8 +330,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             # Use terminate() which sends CTRL-BREAK/TerminateProcess.
             try:
                 self.process.terminate()
-            except Exception:
-                # If terminate is not available or fails, ignore and proceed.
+            except OSError:
+                # Ignore expected OS errors (e.g. already exited, access denied).
+                # We'll proceed to waiting/cleanup below.
                 pass
         else:
             try:
@@ -406,7 +407,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             if IS_WINDOWS:
                 try:
                     self.process.terminate()
-                except Exception:
+                except OSError:
+                    # The process might have already exited or the handle is invalid.
+                    # In such cases there is nothing more to terminate.
                     pass
                 if wait:
                     self.process.wait()
