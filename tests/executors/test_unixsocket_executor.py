@@ -12,6 +12,10 @@ from mirakuru import TimeoutExpired
 from mirakuru.unixsocket import UnixSocketExecutor
 from tests import TEST_SOCKET_SERVER_PATH
 
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="Unix socket tests are not supported on Windows"
+)
+
 
 def test_start_and_wait(
     tmp_path_factory: pytest.TempPathFactory,

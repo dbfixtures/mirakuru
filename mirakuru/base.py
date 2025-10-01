@@ -326,13 +326,22 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if stop_signal is None:
             stop_signal = self._stop_signal
 
-        try:
-            os.killpg(self.process.pid, stop_signal)
-        except OSError as err:
-            if err.errno in IGNORED_ERROR_CODES:
+        if platform.system() == "Windows":
+            # On Windows there is no process groups and no os.killpg.
+            # Use terminate() which sends CTRL-BREAK/TerminateProcess.
+            try:
+                self.process.terminate()
+            except Exception:
+                # If terminate is not available or fails, ignore and proceed.
                 pass
-            else:
-                raise
+        else:
+            try:
+                os.killpg(self.process.pid, stop_signal)
+            except OSError as err:
+                if err.errno in IGNORED_ERROR_CODES:
+                    pass
+                else:
+                    raise
 
         def process_stopped() -> bool:
             """Return True only only when self.process is not running."""
@@ -395,9 +404,17 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if sig is None:
             sig = self._kill_signal
         if self.process and self.running():
-            os.killpg(self.process.pid, sig)
-            if wait:
-                self.process.wait()
+            if platform.system() == "Windows":
+                try:
+                    self.process.terminate()
+                except Exception:
+                    pass
+                if wait:
+                    self.process.wait()
+            else:
+                os.killpg(self.process.pid, sig)
+                if wait:
+                    self.process.wait()
 
         self._kill_all_kids(sig)
         self._clear_process()

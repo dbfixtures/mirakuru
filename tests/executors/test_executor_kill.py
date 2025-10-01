@@ -16,6 +16,10 @@ from mirakuru.compat import SIGKILL
 from mirakuru.exceptions import ProcessFinishedWithError
 from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, ps_aux
 
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="POSIX-specific kill behavior not supported on Windows"
+)
+
 SLEEP_300 = "sleep 300"
 
 

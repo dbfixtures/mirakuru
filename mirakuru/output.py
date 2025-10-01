@@ -25,6 +25,7 @@ from typing import IO, Any, TypeVar
 from mirakuru.base import SimpleExecutor
 
 IS_DARWIN = platform.system() == "Darwin"
+IS_WINDOWS = platform.system() == "Windows"
 
 
 OutputExecutorType = TypeVar("OutputExecutorType", bound="OutputExecutor")
@@ -72,7 +73,7 @@ class OutputExecutor(SimpleExecutor):
         """
         super().start()
 
-        if not IS_DARWIN:
+        if not IS_DARWIN and not IS_WINDOWS:
             polls: list[tuple[select.poll, IO[Any]]] = []
             for output_handle, output_method in (
                 (self._stdout, self.output),
