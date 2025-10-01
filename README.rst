@@ -297,6 +297,6 @@ Release
 
 Install pipenv and --dev dependencies first, Then run:
 
-.. code-block::
+.. code-block:: bash
 
     pipenv run tbump [NEW_VERSION]
