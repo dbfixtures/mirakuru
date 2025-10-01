@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with mirakuru.  If not, see <http://www.gnu.org/licenses/>.
 """Executor that awaits for appearance of a predefined banner in output."""
+
 import platform
 import re
 import select
-from typing import IO, Any, List, Optional, Tuple, TypeVar, Union
+from typing import IO, Any, TypeVar
 
 from mirakuru.base import SimpleExecutor
 
@@ -34,7 +35,7 @@ class OutputExecutor(SimpleExecutor):
 
     def __init__(
         self,
-        command: Union[str, List[str], Tuple[str, ...]],
+        command: str | list[str] | tuple[str, ...],
         banner: str,
         **kwargs: Any,
     ) -> None:
@@ -72,7 +73,7 @@ class OutputExecutor(SimpleExecutor):
         super().start()
 
         if not IS_DARWIN:
-            polls: List[Tuple[select.poll, IO[Any]]] = []
+            polls: list[tuple[select.poll, IO[Any]]] = []
             for output_handle, output_method in (
                 (self._stdout, self.output),
                 (self._stderr, self.err_output),
@@ -119,7 +120,7 @@ class OutputExecutor(SimpleExecutor):
 
         return self
 
-    def _wait_for_darwin_output(self, *fds: Optional[IO[Any]]) -> bool:
+    def _wait_for_darwin_output(self, *fds: IO[Any] | None) -> bool:
         """Select implementation to be used on MacOSX."""
         rlist, _, _ = select.select(fds, [], [], 0)
         for output in rlist:
@@ -128,7 +129,7 @@ class OutputExecutor(SimpleExecutor):
                 return True
         return False
 
-    def _wait_for_output(self, *polls: Tuple["select.poll", IO[Any]]) -> bool:
+    def _wait_for_output(self, *polls: tuple["select.poll", IO[Any]]) -> bool:
         """Check if output matches banner.
 
         .. warning::

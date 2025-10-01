@@ -1,5 +1,6 @@
 # mypy: no-strict-optional
 """Tests that check various kill behaviours."""
+
 import errno
 import os
 import signal
@@ -63,9 +64,9 @@ def test_daemons_killing() -> None:
     executor = SimpleExecutor(("python", SAMPLE_DAEMON_PATH), shell=True)
     executor.start()
     time.sleep(2)
-    assert (
-        executor.running() is not True
-    ), "Executor should not have subprocess running as it started a daemon."
+    assert executor.running() is not True, (
+        "Executor should not have subprocess running as it started a daemon."
+    )
 
     assert SAMPLE_DAEMON_PATH in ps_aux()
     executor.kill()

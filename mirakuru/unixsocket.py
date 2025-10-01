@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with mirakuru.  If not, see <http://www.gnu.org/licenses/>.
 """TCP Socket executor definition."""
+
 import logging
 import socket
 from typing import Any, List, Tuple, Union

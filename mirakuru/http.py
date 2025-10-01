@@ -21,7 +21,7 @@ import re
 import socket
 from http.client import HTTPConnection, HTTPException
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 from mirakuru.tcp import TCPExecutor
@@ -37,12 +37,12 @@ class HTTPExecutor(TCPExecutor):
 
     def __init__(
         self,
-        command: Union[str, List[str], Tuple[str, ...]],
+        command: str | list[str] | tuple[str, ...],
         url: str,
-        status: Union[str, int] = r"^2\d\d$",
+        status: str | int = r"^2\d\d$",
         method: str = "HEAD",
-        payload: Optional[Dict[str, str]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        payload: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize HTTPExecutor executor.

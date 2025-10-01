@@ -4,7 +4,7 @@ import socket
 import sys
 from functools import partial
 from http.client import OK, HTTPConnection
-from typing import Any, Dict, Union
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -175,13 +175,13 @@ def test_default_port() -> None:
         ("(200|404)", False),
     ),
 )
-def test_http_status_codes(accepted_status: Union[None, int, str], expected_timeout: bool) -> None:
+def test_http_status_codes(accepted_status: None | int | str, expected_timeout: bool) -> None:
     """Test how 'status' argument influences executor start.
 
     :param int|str accepted_status: Executor 'status' value
     :param bool expected_timeout: if Executor raises TimeoutExpired or not
     """
-    kwargs: Dict[str, Any] = {
+    kwargs: dict[str, Any] = {
         "command": HTTP_NORMAL_CMD,
         "url": f"http://{HOST}:{PORT}/badpath",
         "timeout": 2,

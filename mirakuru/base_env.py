@@ -21,7 +21,6 @@ import errno
 import logging
 import re
 import subprocess
-from typing import List, Set
 
 try:
     import psutil
@@ -36,7 +35,7 @@ PS_XE_PID_MATCH = re.compile(r"^.*?(\d+).+$")
 """_sre.SRE_Pattern matching PIDs in result from `$ ps xe -o pid,cmd`."""
 
 
-def processes_with_env_psutil(env_name: str, env_value: str) -> Set[int]:
+def processes_with_env_psutil(env_name: str, env_value: str) -> set[int]:
     """Find PIDs of processes having environment variable matching given one.
 
     Internally it uses `psutil` library.
@@ -63,7 +62,7 @@ def processes_with_env_psutil(env_name: str, env_value: str) -> Set[int]:
     return pids
 
 
-def processes_with_env_ps(env_name: str, env_value: str) -> Set[int]:
+def processes_with_env_ps(env_name: str, env_value: str) -> set[int]:
     """Find PIDs of processes having environment variable matching given one.
 
     It uses `$ ps xe -o pid,cmd` command so it works only on systems
@@ -76,8 +75,8 @@ def processes_with_env_ps(env_name: str, env_value: str) -> Set[int]:
              environment variable equal certain value
     :rtype: set
     """
-    pids: Set[int] = set()
-    ps_xe: List[bytes] = []
+    pids: set[int] = set()
+    ps_xe: list[bytes] = []
     try:
         cmd = "ps", "xe", "-o", "pid,cmd"
         ps_xe = subprocess.check_output(cmd).splitlines()

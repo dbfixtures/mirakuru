@@ -1,7 +1,7 @@
 """PidExecutor tests."""
 
 import os
-from typing import Iterator, Optional
+from typing import Iterator
 
 import pytest
 
@@ -43,7 +43,7 @@ def test_start_and_wait() -> None:
 
 
 @pytest.mark.parametrize("pid_file", (None, ""))
-def test_empty_filename(pid_file: Optional[str]) -> None:
+def test_empty_filename(pid_file: str | None) -> None:
     """Check whether an exception is raised if an empty FILENAME is given."""
     with pytest.raises(ValueError):
         PidExecutor(SLEEP, pid_file)  # type: ignore[arg-type]
