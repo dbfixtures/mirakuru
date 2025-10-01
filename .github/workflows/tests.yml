@@ -21,6 +21,14 @@ jobs:
       os: macos-14 # macos-latest is on macos-15 which misbehaves
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
+  windowstests:
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.1.1
+    needs: [tests]
+    with:
+      python-versions: '["3.12", "3.13", "3.14", "pypy-3.11"]'
+      os: windows-latest
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
   oldest:
     needs: [tests]
     runs-on: 'ubuntu-latest'
