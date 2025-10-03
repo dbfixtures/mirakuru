@@ -21,7 +21,6 @@ import atexit
 import errno
 import logging
 import os
-import platform
 import shlex
 import signal
 import subprocess
@@ -39,7 +38,7 @@ from typing import (
 )
 
 from mirakuru.base_env import processes_with_env
-from mirakuru.compat import SIGKILL
+from mirakuru.compat import IS_DARWIN, IS_WINDOWS, SIGKILL
 from mirakuru.exceptions import (
     AlreadyRunning,
     ProcessExitedWithError,
@@ -55,7 +54,7 @@ Name of the environment variable used by mirakuru to mark its subprocesses.
 """
 
 IGNORED_ERROR_CODES = [errno.ESRCH]
-if platform.system() == "Darwin":
+if IS_DARWIN:
     IGNORED_ERROR_CODES = [errno.ESRCH, errno.EPERM]
 
 # Type variables used for self in functions returning self, so it's correctly
@@ -145,7 +144,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
         self._cwd = cwd
         self._shell = True
-        if platform.system() != "Windows":
+        if not IS_WINDOWS:
             self._shell = shell
 
         self._timeout = timeout
@@ -235,7 +234,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         kwargs["shell"] = self._shell
         kwargs["env"] = self.envvars
         kwargs["cwd"] = self._cwd
-        if platform.system() != "Windows":
+        if not IS_WINDOWS:
             kwargs["preexec_fn"] = os.setsid
 
         return kwargs
@@ -326,13 +325,23 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if stop_signal is None:
             stop_signal = self._stop_signal
 
-        try:
-            os.killpg(self.process.pid, stop_signal)
-        except OSError as err:
-            if err.errno in IGNORED_ERROR_CODES:
+        if IS_WINDOWS:
+            # On Windows there is no process groups and no os.killpg.
+            # Use terminate() which sends CTRL-BREAK/TerminateProcess.
+            try:
+                self.process.terminate()
+            except OSError:
+                # Ignore expected OS errors (e.g. already exited, access denied).
+                # We'll proceed to waiting/cleanup below.
                 pass
-            else:
-                raise
+        else:
+            try:
+                os.killpg(self.process.pid, stop_signal)
+            except OSError as err:
+                if err.errno in IGNORED_ERROR_CODES:
+                    pass
+                else:
+                    raise
 
         def process_stopped() -> bool:
             """Return True only only when self.process is not running."""
@@ -395,9 +404,19 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if sig is None:
             sig = self._kill_signal
         if self.process and self.running():
-            os.killpg(self.process.pid, sig)
-            if wait:
-                self.process.wait()
+            if IS_WINDOWS:
+                try:
+                    self.process.terminate()
+                except OSError:
+                    # The process might have already exited or the handle is invalid.
+                    # In such cases there is nothing more to terminate.
+                    pass
+                if wait:
+                    self.process.wait()
+            else:
+                os.killpg(self.process.pid, sig)
+                if wait:
+                    self.process.wait()
 
         self._kill_all_kids(sig)
         self._clear_process()

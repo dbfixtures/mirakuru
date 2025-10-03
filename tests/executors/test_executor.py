@@ -2,6 +2,7 @@
 """Test basic executor functionality."""
 
 import gc
+import platform
 import shlex
 import signal
 import uuid
@@ -108,22 +109,56 @@ ECHO_FOOBAR = 'echo "foobar"'
 
 
 @pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
-def test_process_output(command: Union[str, List[str]]) -> None:
+@pytest.mark.parametrize(
+    "expected_output",
+    (
+        pytest.param(
+            "foobar\n",
+            marks=pytest.mark.skipif(
+                platform.system() == "Windows", reason="Windows leaves quotes"
+            ),
+        ),
+        pytest.param(
+            '"foobar"\n',
+            marks=pytest.mark.skipif(
+                platform.system() != "Windows", reason="Windows leaves quotes"
+            ),
+        ),
+    ),
+)
+def test_process_output(command: Union[str, List[str]], expected_output: str) -> None:
     """Start a process, check output and shut it down."""
     executor = SimpleExecutor(command)
     executor.start()
 
-    assert executor.output().read() == "foobar\n"
+    assert executor.output().read() == expected_output, f"command was {command!r}"
     executor.stop()
 
 
 @pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
-def test_process_output_shell(command: Union[str, List[str]]) -> None:
-    """Start process, check output and shut it down with shell set to True."""
+@pytest.mark.parametrize(
+    "expected_output",
+    (
+        pytest.param(
+            "foobar",
+            marks=pytest.mark.skipif(
+                platform.system() == "Windows", reason="Windows leaves quotes"
+            ),
+        ),
+        pytest.param(
+            '"foobar"',
+            marks=pytest.mark.skipif(
+                platform.system() != "Windows", reason="Windows leaves quotes"
+            ),
+        ),
+    ),
+)
+def test_process_output_shell(command: Union[str, List[str]], expected_output: str) -> None:
+    """Start a process, check output and shut it down with shell set to True."""
     executor = SimpleExecutor(command, shell=True)
     executor.start()
 
-    assert executor.output().read().strip() == "foobar"
+    assert executor.output().read().strip() == expected_output, f"command was {command!r}"
     executor.stop()
 
 
