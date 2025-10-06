@@ -27,5 +27,4 @@ IS_DARWIN = platform.system() == "Darwin"
 # Windows does not have SIGKILL, fall back to SIGTERM.
 SIGKILL = getattr(signal, "SIGKILL", signal.SIGTERM)
 
-
 __all__ = ("SIGKILL", "IS_WINDOWS", "IS_DARWIN")

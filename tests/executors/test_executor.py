@@ -3,7 +3,6 @@
 
 import gc
 import shlex
-import signal
 import uuid
 from subprocess import check_output
 from typing import List, Union
@@ -15,6 +14,7 @@ from mirakuru import Executor
 from mirakuru.base import SimpleExecutor
 from mirakuru.exceptions import ProcessExitedWithError, TimeoutExpired
 from tests import SAMPLE_DAEMON_PATH, ps_aux
+from tests.compat import SIGQUIT
 from tests.retry import retry
 
 SLEEP_300 = "sleep 300"
@@ -44,7 +44,7 @@ def test_command(command: Union[str, List[str]]) -> None:
 
 def test_custom_signal_stop() -> None:
     """Start process and shuts it down using signal SIGQUIT."""
-    executor = SimpleExecutor(SLEEP_300, stop_signal=signal.SIGQUIT)
+    executor = SimpleExecutor(SLEEP_300, stop_signal=SIGQUIT)
     executor.start()
     assert executor.running() is True
     executor.stop()
@@ -56,7 +56,7 @@ def test_stop_custom_signal_stop() -> None:
     executor = SimpleExecutor(SLEEP_300)
     executor.start()
     assert executor.running() is True
-    executor.stop(stop_signal=signal.SIGQUIT)
+    executor.stop(stop_signal=SIGQUIT)
     assert executor.running() is False
 
 
@@ -65,7 +65,7 @@ def test_stop_custom_exit_signal_stop() -> None:
     executor = SimpleExecutor("false", shell=True)
     executor.start()
     # false exits instant, so there should not be a process to stop
-    retry(lambda: executor.stop(stop_signal=signal.SIGQUIT, expected_returncode=-3))
+    retry(lambda: executor.stop(stop_signal=SIGQUIT, expected_returncode=-3))
     assert executor.running() is False
 
 
@@ -73,7 +73,7 @@ def test_stop_custom_exit_signal_stop() -> None:
 def test_stop_custom_exit_signal_context() -> None:
     """Start a process and expect a custom exit signal in the context manager."""
     with SimpleExecutor("false", expected_returncode=-3, shell=True) as executor:
-        executor.stop(stop_signal=signal.SIGQUIT)
+        executor.stop(stop_signal=SIGQUIT)
         assert executor.running() is False
 
 
