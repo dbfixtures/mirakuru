@@ -365,12 +365,14 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if expected_returncode is None:
             expected_returncode = self._expected_returncode
         if expected_returncode is None:
-            # Assume a POSIX approach where sending a SIGNAL means
-            # that the process should exist with -SIGNAL exit code.
-            # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
-            expected_returncode = -stop_signal
+            # On POSIX, sending a signal usually results in a negative exit code
+            # equal to -SIGNAL. On Windows, there is no such convention, so do not
+            # enforce any particular return code by default.
+            if not IS_WINDOWS:
+                # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
+                expected_returncode = -stop_signal
 
-        if exit_code and exit_code != expected_returncode:
+        if expected_returncode is not None and exit_code and exit_code != expected_returncode:
             raise ProcessFinishedWithError(self, exit_code)
 
         return self
