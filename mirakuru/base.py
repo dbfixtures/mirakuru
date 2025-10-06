@@ -372,11 +372,6 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
                 # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
                 expected_returncode = -stop_signal
 
-        # # On Windows, negative expected return codes (POSIX signal semantics)
-        # # cannot occur. If such an expectation is provided explicitly, ignore it.
-        # if IS_WINDOWS and expected_returncode is not None and expected_returncode < 0:
-        #     expected_returncode = None
-
         if expected_returncode is not None and exit_code and exit_code != expected_returncode:
             raise ProcessFinishedWithError(self, exit_code)
 

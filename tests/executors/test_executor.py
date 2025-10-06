@@ -12,6 +12,7 @@ import pytest
 
 from mirakuru import Executor
 from mirakuru.base import SimpleExecutor
+from mirakuru.compat import IS_WINDOWS
 from mirakuru.exceptions import ProcessExitedWithError, TimeoutExpired
 from tests import SAMPLE_DAEMON_PATH, ps_aux
 from tests.compat import SIGQUIT
@@ -69,6 +70,7 @@ def test_stop_custom_exit_signal_stop() -> None:
     assert executor.running() is False
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="Windows does not support false command")
 @pytest.mark.flaky(reruns=5, reruns_delay=1, only_rerun="ProcessFinishedWithError")
 def test_stop_custom_exit_signal_context() -> None:
     """Start a process and expect a custom exit signal in the context manager."""
