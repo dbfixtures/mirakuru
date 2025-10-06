@@ -143,9 +143,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             self.command_parts = shlex.split(command)
 
         self._cwd = cwd
-        self._shell = True
-        if not IS_WINDOWS:
-            self._shell = shell
+        self._shell = shell
+        # if not IS_WINDOWS:
+        #     self._shell = shell
 
         self._timeout = timeout
         self._sleep = sleep
