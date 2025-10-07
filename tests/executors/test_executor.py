@@ -14,7 +14,7 @@ from mirakuru import Executor
 from mirakuru.base import SimpleExecutor
 from mirakuru.compat import IS_WINDOWS
 from mirakuru.exceptions import ProcessExitedWithError, TimeoutExpired
-from tests import SAMPLE_DAEMON_PATH, ps_aux
+from tests import SAMPLE_DAEMON_PATH, list_processes
 from tests.compat import SIGQUIT
 from tests.retry import retry
 
@@ -159,24 +159,29 @@ def test_forgotten_stop() -> None:
     by default on instance cleanup.
     """
     mark = uuid.uuid1().hex
-    # We cannot simply do `sleep 300 #<our-uuid>` in a shell because in that
-    # case bash (default shell on some systems) does `execve` without cloning
-    # itself - that means there will be no process with commandline like:
-    # '/bin/sh -c sleep 300 && true #<our-uuid>' - instead that process would
-    # get substituted with 'sleep 300' and the marked commandline would be
-    # overwritten.
-    # Injecting some flow control (`&&`) forces bash to fork properly.
-    marked_command = f"sleep 300 && true #{mark}"
+    if IS_WINDOWS:
+        # On Windows keep cmd.exe alive so its command line contains our mark.
+        # Run via cmd /c and wait on timeout, adding the mark in a trailing REM comment.
+        marked_command = f'cmd /c "timeout /t 300 /nobreak >nul && rem #{mark}"'
+    else:
+        # We cannot simply do `sleep 300 #<our-uuid>` in a shell because in that
+        # case bash (default shell on some systems) does `execve` without cloning
+        # itself - that means there will be no process with commandline like:
+        # '/bin/sh -c sleep 300 && true #<our-uuid>' - instead that process would
+        # get substituted with 'sleep 300' and the marked commandline would be
+        # overwritten.
+        # Injecting some flow control (`&&`) forces bash to fork properly.
+        marked_command = f"sleep 300 && true #{mark}"
     executor = SimpleExecutor(marked_command, shell=True)
     executor.start()
     assert executor.running() is True
-    ps_output = ps_aux()
+    ps_output = list_processes()
     assert mark in ps_output, (
         f"The test command {marked_command} should be running in \n\n {ps_output}."
     )
     del executor
     gc.collect()  # to force 'del' immediate effect
-    assert mark not in ps_aux(), "The test process should not be running at this point."
+    assert mark not in list_processes(), "The test process should not be running at this point."
 
 
 def test_executor_raises_if_process_exits_with_error() -> None:
@@ -252,4 +257,4 @@ def test_mirakuru_cleanup() -> None:
                   '
     """
     check_output(shlex.split(cmd.replace("\n", "")))
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in list_processes()

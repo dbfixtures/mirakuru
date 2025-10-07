@@ -13,7 +13,7 @@ import pytest
 from mirakuru import HTTPExecutor, SimpleExecutor
 from mirakuru.compat import SIGKILL
 from mirakuru.exceptions import ProcessFinishedWithError
-from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, ps_aux
+from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, list_processes
 from tests.compat import SIGQUIT
 
 pytestmark = pytest.mark.skipif(
@@ -72,9 +72,9 @@ def test_daemons_killing() -> None:
         "Executor should not have subprocess running as it started a daemon."
     )
 
-    assert SAMPLE_DAEMON_PATH in ps_aux()
+    assert SAMPLE_DAEMON_PATH in list_processes()
     executor.kill()
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in list_processes()
 
 
 def test_stopping_brutally() -> None:
