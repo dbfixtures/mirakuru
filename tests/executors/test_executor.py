@@ -125,7 +125,12 @@ def test_process_output_shell(command: Union[str, List[str]]) -> None:
     executor = SimpleExecutor(command, shell=True)
     executor.start()
 
-    assert executor.output().read().strip() == "foobar", f"command was {command!r}"
+    out = executor.output().read().strip()
+    # On Windows when using cmd.exe, echo may preserve quotes around arguments.
+    # Normalize by stripping a single pair of surrounding double quotes.
+    if len(out) >= 2 and out[0] == '"' and out[-1] == '"':
+        out = out[1:-1]
+    assert out == "foobar", f"command was {command!r} and output was {out!r}"
     executor.stop()
 
 
@@ -159,19 +164,19 @@ def test_forgotten_stop() -> None:
     by default on instance cleanup.
     """
     mark = uuid.uuid1().hex
+    # We cannot simply do `sleep 300 #<our-uuid>` in a shell because in that
+    # case bash (default shell on some systems) does `execve` without cloning
+    # itself - that means there will be no process with commandline like:
+    # '/bin/sh -c sleep 300 && true #<our-uuid>' - instead that process would
+    # get substituted with 'sleep 300' and the marked commandline would be
+    # overwritten.
+    # Injecting some flow control (`&&`) forces bash to fork properly.
+    marked_command = f"sleep 300 && true #{mark}"
     if IS_WINDOWS:
-        # On Windows keep cmd.exe alive so its command line contains our mark.
-        # Run via cmd /c and wait on timeout, adding the mark in a trailing REM comment.
-        marked_command = f'cmd /c "timeout /t 300 /nobreak >nul && rem #{mark}"'
-    else:
-        # We cannot simply do `sleep 300 #<our-uuid>` in a shell because in that
-        # case bash (default shell on some systems) does `execve` without cloning
-        # itself - that means there will be no process with commandline like:
-        # '/bin/sh -c sleep 300 && true #<our-uuid>' - instead that process would
-        # get substituted with 'sleep 300' and the marked commandline would be
-        # overwritten.
-        # Injecting some flow control (`&&`) forces bash to fork properly.
-        marked_command = f"sleep 300 && true #{mark}"
+        # On Windows CI environments can use different shells. Prefer Git Bash if available
+        # to avoid relying on Windows-specific `timeout` semantics. Keep the shell process resident
+        # by injecting flow control and include the mark in a trailing comment.
+        marked_command = f'bash -lc "{marked_command}"'
     executor = SimpleExecutor(marked_command, shell=True)
     executor.start()
     assert executor.running() is True
