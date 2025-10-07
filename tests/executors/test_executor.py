@@ -3,6 +3,7 @@
 
 import gc
 import shlex
+import sys
 import uuid
 from subprocess import check_output
 from typing import List, Union
@@ -173,10 +174,9 @@ def test_forgotten_stop() -> None:
     # Injecting some flow control (`&&`) forces bash to fork properly.
     marked_command = f"sleep 300 && true #{mark}"
     if IS_WINDOWS:
-        # On Windows CI environments can use different shells. Prefer Git Bash if available
-        # to avoid relying on Windows-specific `timeout` semantics. Keep the shell process resident
-        # by injecting flow control and include the mark in a trailing comment.
-        marked_command = f'bash -lc "{marked_command}"'
+        # On Windows avoid relying on bash/cmd peculiarities. Use Python so the mark
+        # is embedded directly in the command line of the child process, which we can detect.
+        marked_command = f'{sys.executable} -c "import time; time.sleep(300) # {mark}"'
     executor = SimpleExecutor(marked_command, shell=True)
     executor.start()
     assert executor.running() is True
@@ -196,7 +196,15 @@ def test_executor_raises_if_process_exits_with_error() -> None:
     should raise an exception.
     """
     error_code = 12
-    failing_executor = Executor(["bash", "-c", f"exit {error_code!s}"], timeout=5)
+    if IS_WINDOWS:
+        cmd_parts = [
+            sys.executable,
+            "-c",
+            f"import sys; sys.exit({error_code!s})",
+        ]
+    else:
+        cmd_parts = ["bash", "-c", f"exit {error_code!s}"]
+    failing_executor = Executor(cmd_parts, timeout=5)
     failing_executor.pre_start_check = mock.Mock(return_value=False)  # type: ignore
     # After-start check will keep returning False to let the process terminate.
     failing_executor.after_start_check = mock.Mock(return_value=False)  # type: ignore
