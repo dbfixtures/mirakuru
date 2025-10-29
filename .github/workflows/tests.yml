@@ -11,6 +11,7 @@ jobs:
     uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.1.1
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.11"]'
+      pytest_opts: '-n auto --dist loadgroup'
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
@@ -18,6 +19,7 @@ jobs:
     needs: [tests]
     with:
       python-versions: '["3.12", "3.13", "3.14", "pypy-3.11"]'
+      pytest_opts: '-n auto --dist loadgroup --basetemp=$RUNNER_TEMP/pt'
       os: macos-14 # macos-latest is on macos-15 which misbehaves
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -43,7 +45,7 @@ jobs:
       - name: Run tests
         uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.1.1
         with:
-          command: pytest -v --cov --cov-report=xml
+          command: pytest -v --cov --cov-report=xml -n auto --dist loadgroup
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
         with:

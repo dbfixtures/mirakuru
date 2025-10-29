@@ -18,6 +18,8 @@ PORT = 7987
 HTTP_NORMAL_CMD = f"{HTTP_SERVER_CMD} {PORT}"
 HTTP_SLOW_CMD = f"{sys.executable} {TEST_SERVER_PATH} {HOST}:{PORT}"
 
+pytestmark = pytest.mark.xdist_group(name=f"http-port-{PORT}")
+
 
 slow_server_executor = partial(  # pylint: disable=invalid-name
     HTTPExecutor,

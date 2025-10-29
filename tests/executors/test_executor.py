@@ -237,6 +237,7 @@ def test_executor_methods_returning_self() -> None:
     assert SimpleExecutor(SLEEP_300).start().stop().output
 
 
+@pytest.mark.xdist_group(name="sample-deamon")
 def test_mirakuru_cleanup() -> None:
     """Test if cleanup_subprocesses is fired correctly on python exit."""
     cmd = f"""

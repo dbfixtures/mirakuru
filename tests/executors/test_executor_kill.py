@@ -54,6 +54,7 @@ def test_already_closed() -> None:
     assert not executor.process
 
 
+@pytest.mark.xdist_group(name="sample-deamon")
 def test_daemons_killing() -> None:
     """Test if all subprocesses of SimpleExecutor can be killed.
 
