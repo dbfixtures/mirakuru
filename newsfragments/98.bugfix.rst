@@ -1,4 +1,0 @@
-Prevent ``OutputExecutor`` from hanging when a child process produces
-a large amount of output before the banner.
-This was resolved by implementing non-blocking reads and fragmented output consumption
-to avoid pipe backpressure and ensure timely banner detection.

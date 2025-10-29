@@ -1,1 +1,0 @@
-Executors now accept additional kwargs that can be passed to popen.

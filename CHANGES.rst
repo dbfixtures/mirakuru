@@ -3,6 +3,43 @@ CHANGELOG
 
 .. towncrier release notes start
 
+mirakuru 3.0.0 (2025-10-29)
+===========================
+
+Breaking changes
+----------------
+
+- Drop support for Python 3.9
+
+
+Features
+--------
+
+- Executors now accept additional kwargs that can be passed to popen. (`#905 <https://github.com/dbfixtures/mirakuru/issues/905>`_)
+- Add support for Python 3.14
+
+
+Bugfixes
+--------
+
+- Prevent ``OutputExecutor`` from hanging when a child process produces
+  a large amount of output before the banner.
+  This was resolved by implementing non-blocking reads and fragmented output consumption
+  to avoid pipe backpressure and ensure timely banner detection. (`#98 <https://github.com/dbfixtures/mirakuru/issues/98>`_)
+
+
+Miscellaneus
+------------
+
+- Downgrade MacOS runner to 14, as the 15 running as macos-latest at the moment is misbehaving.
+
+  Tests on PyPy are running fine, while those on regular python vversion constantly fail.
+- Improve README
+- Replace black with ruff-format
+- Speed up tests with pytest-xdist
+- Update pipelines for fizyk/actions-reuse 4
+
+
 2.6.1 (2025-07-02)
 ==================
 
