@@ -101,34 +101,37 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         stdin: None | int | IO[Any] = subprocess.PIPE,
         stdout: None | int | IO[Any] = subprocess.PIPE,
         stderr: None | int | IO[Any] = None,
+        popen_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Initialize executor.
 
-        :param (str, list) command: command to be run by the subprocess
-        :param str cwd: current working directory to be set for executor
-        :param bool shell: same as the `subprocess.Popen` shell definition.
+        :param command: command to be run by the subprocess
+        :param cwd: current working directory to be set for executor
+        :param shell: same as the `subprocess.Popen` shell definition.
             On Windows always set to True.
-        :param int timeout: number of seconds to wait for the process to start
+        :param timeout: number of seconds to wait for the process to start
             or stop.
-        :param float sleep: how often to check for start/stop condition
-        :param int stop_signal: signal used to stop process run by the executor.
+        :param sleep: how often to check for start/stop condition
+        :param stop_signal: signal used to stop a process run by the executor.
             default is `signal.SIGTERM`
-        :param int kill_signal: signal used to kill process run by the executor.
+        :param kill_signal: signal used to kill a process run by the executor.
             default is `signal.SIGKILL` (`signal.SIGTERM` on Windows)
-        :param int expected_returncode: expected exit code.
-            default is None which means, Executor will determine a POSIX
+        :param expected_returncode: expected exit code.
+            default is None, which means, Executor will determine a POSIX
             compatible return code based on signal sent.
-        :param dict envvars: Additional environment variables
-        :param int stdin: file descriptor for stdin
-        :param int stdout: file descriptor for stdout
-        :param int stderr: file descriptor for stderr
+        :param envvars: Additional environment variables
+        :param stdin: file descriptor for stdin
+        :param stdout: file descriptor for stdout
+        :param stderr: file descriptor for stderr
+        :param popen_kwargs: additional keyword arguments to be passed to
+            `subprocess.Popen` when starting the process.
 
         .. note::
 
-            **timeout** set for an executor is valid for all the level of waits
+            **timeout** set for an executor is valid for all the levels of waits
             on the way up. That means that if some more advanced executor
-            establishes the timeout to 10 seconds and it will take 5 seconds
-            for the first check, second check will only have 5 seconds left.
+            establishes the timeout to 10 seconds, and it will take 5 seconds
+            for the first check, the second check will only have 5 seconds left.
 
             Your executor will raise an exception if something goes wrong
             during this time. The default value of timeout is ``None``, so it
@@ -160,6 +163,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         self._stderr = stderr
 
         self._endtime: float | None = None
+        self._additional_popen_kwargs = popen_kwargs or {}
         self.process: subprocess.Popen | None = None
         """A :class:`subprocess.Popen` instance once process is started."""
 
@@ -223,6 +227,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         kwargs: dict[str, Any] = {}
+        kwargs.update(self._additional_popen_kwargs)
 
         if self._stdin:
             kwargs["stdin"] = self._stdin
