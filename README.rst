@@ -6,9 +6,11 @@ mirakuru
 
 Mirakuru is a process orchestration tool designed for functional and integration tests.
 
-Maybe you want to be able to start a database before you start your program
-or maybe you just need to set additional services up for your tests.
-This is where you should consider using **mirakuru** to add superpowers to your program or tests.
+When your application or tests rely on external processes (like databases, APIs, or other services),
+ensuring these processes are started and ready *before* your main code executes can be challenging.
+**Mirakuru** solves this by orchestrating the startup of these processes and waiting until they
+are fully operational (e.g., accepting connections, producing specific output) before allowing
+your program or tests to continue.
 
 
 .. image:: https://img.shields.io/pypi/v/mirakuru.svg
@@ -27,30 +29,71 @@ This is where you should consider using **mirakuru** to add superpowers to your 
     :target: https://pypi.python.org/pypi/mirakuru/
     :alt: License
 
+Installation
+------------
+
+Install mirakuru using pip:
+
+.. code-block:: bash
+
+    pip install mirakuru
+
+Quick Start
+-----------
+
+Here's a simple example showing how mirakuru ensures a Redis server is ready before your code runs:
+
+.. code-block:: python
+
+    from mirakuru import TCPExecutor
+
+    # Start Redis server and wait until it accepts connections on port 6379
+    redis_executor = TCPExecutor('redis-server', host='localhost', port=6379)
+    redis_executor.start()
+
+    # Redis is now running and ready to accept connections
+    # ... your code that uses Redis here ...
+
+    # Clean up - stop the Redis server
+    redis_executor.stop()
+
+The key benefit: ``start()`` blocks until Redis is actually ready, so you never try to connect too early.
+
+
 
 Usage
 -----
 
-In a project that relies on multiple processes there might be a need to guard code
-with tests that verify interprocess communication. So one needs to set up all of
+In projects that rely on multiple processes, there might be a need to guard code
+with tests that verify interprocess communication. You need to set up all the
 required databases, auxiliary and application services to verify their cooperation.
-Synchronising (or orchestrating) test procedure with tested processes might be a hell.
+Synchronizing (or orchestrating) test procedures with tested processes can be challenging.
 
 If so, then **mirakuru** is what you need.
 
-``Mirakuru`` starts your process and waits for the clear indication that it's running.
-Library provides seven executors to fit different cases:
+``Mirakuru`` starts your process and waits for a clear indication that it's running.
+The library provides seven executors to fit different cases:
 
-* **SimpleExecutor** - starts a process and does not wait for anything.
-  It is useful to stop or kill a process and its subprocesses.
-  Base class for all the rest of executors.
-* **Executor** - base class for executors verifying if a process has started.
-* **OutputExecutor** - waits for a specified output to be printed by a process.
-* **TCPExecutor** - waits for the ability to connect through TCP with a process.
-* **UnixSocketExecutor** - waits for the ability to connect through Unix socket
-  with a process
-* **HTTPExecutor** - waits for a successful HEAD request (and TCP before).
-* **PidExecutor** - waits for a specified .pid file to exist.
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Executor
+     - Use When
+   * - **SimpleExecutor**
+     - You just need to start/stop a process without waiting for readiness. Base class for all other executors.
+   * - **Executor**
+     - Base class for executors that verify process startup.
+   * - **OutputExecutor**
+     - Your process prints a specific message when ready (e.g., "Server started on port 8080")
+   * - **TCPExecutor**
+     - Your process opens a TCP port when ready (e.g., Redis, PostgreSQL, Memcached)
+   * - **UnixSocketExecutor**
+     - Your process opens a Unix socket when ready (e.g., Docker daemon, some databases)
+   * - **HTTPExecutor**
+     - Your process serves HTTP requests when ready (e.g., web servers, REST APIs)
+   * - **PidExecutor**
+     - Your process creates a .pid file when ready (e.g., traditional Unix daemons)
 
 SimpleExecutor
 ++++++++++++++
@@ -72,9 +115,8 @@ It simply starts the process passed to constructor, and reports it as running.
 OutputExecutor
 ++++++++++++++
 
-OutputExecutor is the executor that starts the process,
-but does not report it as started, unless it receives specified marker/banner in
-process output.
+OutputExecutor starts a process and monitors its output for a specific text marker
+(banner). The process is not reported as started until this marker appears in the output.
 
 .. code-block:: python
 
@@ -97,10 +139,10 @@ It is considered as started, and executor releases your script from wait to work
 TCPExecutor
 +++++++++++
 
-Is the executor that should be used to start
-processes that are using TCP connection. This executor tries to connect with
-the process on given host:port to see if it started accepting connections. Once it
-does, it reports the process as started and a code returns to normal execution.
+TCPExecutor should be used to start processes that communicate over TCP connections.
+This executor tries to connect to the process on the specified host and port to check
+if it started accepting connections. Once it successfully connects, the process is
+reported as started and control returns to your code.
 
 .. code-block:: python
 
@@ -116,10 +158,11 @@ does, it reports the process as started and a code returns to normal execution.
 HTTPExecutor
 ++++++++++++
 
-Is executor that will be used to start web applications for example.
-To start it, you apart from command, you need to pass a URL.
-This URL will be used to make a (by default) HEAD request. Once successful,
-the executor will be considered started, and a code will return to normal execution.
+HTTPExecutor is designed for starting web applications and HTTP services.
+In addition to the command, you need to pass a URL that will be used to check
+if the service is ready. By default, it makes a HEAD request to this URL.
+Once the request succeeds, the executor reports the process as started and
+control returns to your code.
 
 .. code-block:: python
 
@@ -183,7 +226,7 @@ notify their running by creating a .pid file.
 .. code-block:: python
 
     from mirakuru import HTTPExecutor
-    from httplib import HTTPConnection, OK
+    from http.client import HTTPConnection, OK
 
 
     def test_it_works():
@@ -287,16 +330,6 @@ See:
 * `#392 <https://github.com/dbfixtures/mirakuru/issues/392>`_
 * `#336 <https://github.com/dbfixtures/mirakuru/issues/336>`_
 
-Also, With the introduction of `WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_
-the need for raw Windows support might not be that urgant... If you've got any thoughts or are willing to contribute,
+Also, with the introduction of `WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_
+the need for raw Windows support might not be that urgent... If you've got any thoughts or are willing to contribute,
 please start with the issues listed above.
-
-
-Release
-=======
-
-Install pipenv and --dev dependencies first, Then run:
-
-.. code-block:: bash
-
-    pipenv run tbump [NEW_VERSION]

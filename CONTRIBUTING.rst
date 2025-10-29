@@ -46,3 +46,12 @@ Testing
 
 # Tests are writen using pytest.
 # PR tests run on Github Actions.
+
+Release
+-------
+
+Install pipenv and --dev dependencies first, Then run:
+
+.. code-block:: bash
+
+    pipenv run tbump [NEW_VERSION]
