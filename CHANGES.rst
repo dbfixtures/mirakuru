@@ -3,6 +3,17 @@ CHANGELOG
 
 .. towncrier release notes start
 
+mirakuru 3.0.1 (2025-11-01)
+===========================
+
+Bugfixes
+--------
+
+- Correctly point the minimum required python version.
+
+  Not updating it causes installs without pinned mirakuru versions to fail.
+
+
 mirakuru 3.0.0 (2025-10-29)
 ===========================
 

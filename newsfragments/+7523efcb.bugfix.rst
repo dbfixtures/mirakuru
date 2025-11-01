@@ -1,3 +1,0 @@
-Correctly point the minimum required python version.
-
-Not updating it causes installs without pinned mirakuru versions to fail.

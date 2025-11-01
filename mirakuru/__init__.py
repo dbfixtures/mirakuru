@@ -32,7 +32,7 @@ from mirakuru.output import OutputExecutor
 from mirakuru.pid import PidExecutor
 from mirakuru.tcp import TCPExecutor
 
-__version__ = "3.0.0"
+__version__ = "3.0.1"
 
 __all__ = (
     "Executor",
