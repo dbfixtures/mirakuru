@@ -30,7 +30,7 @@ dependencies = [
     # <https://github.com/giampaolo/psutil/issues/82>.
     "psutil>=4.0.0; sys_platform != 'cygwin'",
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 
 [project.urls]
 "Source" = "https://github.com/dbfixtures/mirakuru"
