@@ -17,15 +17,12 @@
 # along with mirakuru.  If not, see <http://www.gnu.org/licenses/>.
 """Executor that awaits for appearance of a predefined banner in output."""
 
-import platform
 import re
 import select
 from typing import IO, Any, TypeVar
 
 from mirakuru.base import SimpleExecutor
-
-IS_DARWIN = platform.system() == "Darwin"
-
+from mirakuru.compat import IS_DARWIN, IS_WINDOWS
 
 OutputExecutorType = TypeVar("OutputExecutorType", bound="OutputExecutor")
 
@@ -75,7 +72,7 @@ class OutputExecutor(SimpleExecutor):
         """
         super().start()
 
-        if not IS_DARWIN:
+        if not IS_DARWIN and not IS_WINDOWS:
             polls: list[tuple[select.poll, IO[Any]]] = []
             for output_handle, output_method in (
                 (self._stdout, self.output),

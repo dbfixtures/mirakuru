@@ -17,10 +17,14 @@
 # along with mirakuru.  If not, see <http://www.gnu.org/licenses/>.
 """Mirakuru compatibility module."""
 
+import platform
 import signal
+
+# Unified operating system detection flags
+IS_WINDOWS = platform.system() == "Windows"
+IS_DARWIN = platform.system() == "Darwin"
 
 # Windows does not have SIGKILL, fall back to SIGTERM.
 SIGKILL = getattr(signal, "SIGKILL", signal.SIGTERM)
 
-
-__all__ = ("SIGKILL",)
+__all__ = ("SIGKILL", "IS_WINDOWS", "IS_DARWIN")
