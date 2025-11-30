@@ -80,9 +80,9 @@ directory = "misc"
 name = "Miscellaneus"
 showcontent = false
 
-[tool.pytest.ini_options]
-filterwarnings = "error"
-xfail_strict = "True"
+[tool.pytest]
+filterwarnings = ["error"]
+strict_xfail = true
 
 [tool.ruff]
 line-length = 100
