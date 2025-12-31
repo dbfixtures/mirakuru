@@ -321,9 +321,13 @@ Projects `PyPI page <https://pypi.python.org/pypi/mirakuru>`_.
 Windows support
 ---------------
 
-Frankly, there's none, Python's support differs a bit in required places
-and the team has no experience in developing for Windows.
-However we'd welcome contributions that will allow the windows support.
+Limited native Windows support is available.
+
+- Supported: SimpleExecutor, Executor, TCPExecutor, HTTPExecutor, PidExecutor.
+- Not supported on Windows: UnixSocketExecutor (UNIX domain sockets).
+- Notes: process termination semantics differ; on Windows we use terminate() instead of POSIX signals, and output polling falls back to select.select.
+
+We welcome contributions to improve Windows support.
 
 See:
 
