@@ -8,14 +8,14 @@ on:
 
 jobs:
   tests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.1.1
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.2.1
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.11"]'
       pytest_opts: '-n auto --dist loadgroup'
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.1.1
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.2.1
     needs: [tests]
     with:
       python-versions: '["3.12", "3.13", "3.14", "pypy-3.11"]'
