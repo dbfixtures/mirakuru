@@ -1,0 +1,1 @@
+Ignore macOS psutil environ permission errors when scanning processes, preventing sporadic cleanup failures.
