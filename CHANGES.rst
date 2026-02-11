@@ -3,6 +3,23 @@ CHANGELOG
 
 .. towncrier release notes start
 
+mirakuru 3.0.2 (2026-02-11)
+===========================
+
+Bugfixes
+--------
+
+- Ignore macOS psutil environ permission errors when scanning processes, preventing sporadic cleanup failures.
+
+
+Miscellaneus
+------------
+
+- `#955 <https://github.com/dbfixtures/mirakuru/issues/955>`_, `#960 <https://github.com/dbfixtures/mirakuru/issues/960>`_
+- Lint required-version and classifiers within pyproject.toml
+- Small refactoring to test_tcp_executor in an attempt to avoid random Address already in use.
+
+
 mirakuru 3.0.1 (2025-11-01)
 ===========================
 
