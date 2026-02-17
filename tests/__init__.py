@@ -18,5 +18,5 @@ HTTP_SERVER_CMD = f"{sys.executable} -m http.server"
 
 
 def ps_aux() -> str:
-    """Return output of systems `ps aux -w` call."""
-    return check_output(("ps", "aux", "-w")).decode()
+    """Return output of systems `ps auxww` call."""
+    return check_output(("ps", "auxww")).decode()
