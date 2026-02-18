@@ -1,6 +1,7 @@
 """TCPExecutor tests."""
 
 import logging
+import shlex
 import socket
 import sys
 
@@ -26,7 +27,7 @@ def nc_command(port: int, sleep_seconds: int = 2) -> str:
     # chr(0)*0 evaluates to '' (empty string) to bind on all interfaces
     # without embedding quote characters that would break shell quoting.
     return (
-        f"{sys.executable} -c "
+        f"{shlex.quote(sys.executable)} -c "
         f"'import time,socket; time.sleep({sleep_seconds}); "
         f"s=socket.socket(); "
         f"s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); "
