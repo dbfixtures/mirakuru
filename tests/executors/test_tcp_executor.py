@@ -1,7 +1,6 @@
 """TCPExecutor tests."""
 
 import logging
-import shlex
 import socket
 import sys
 
@@ -21,20 +20,18 @@ def _find_free_port() -> int:
         return int(s.getsockname()[1])
 
 
-def nc_command(port: int, sleep_seconds: int = 2) -> str:
+def nc_command(port: int, sleep_seconds: int = 2) -> tuple[str, ...]:
     """Construct a command to start a TCP listener on the specified port."""
     # Use Python's socket module instead of nc to avoid depending on netcat.
-    # chr(0)*0 evaluates to '' (empty string) to bind on all interfaces
-    # without embedding quote characters that would break shell quoting.
-    return (
-        f"{shlex.quote(sys.executable)} -c "
-        f"'import time,socket; time.sleep({sleep_seconds}); "
+    script = (
+        f"import time,socket; time.sleep({sleep_seconds}); "
         f"s=socket.socket(); "
         f"s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); "
-        f"s.bind((chr(0)*0,{port})); "
+        f"s.bind(('',{port})); "
         f"s.listen(1); "
-        f"time.sleep(300)'"
+        f"time.sleep(300)"
     )
+    return (sys.executable, "-c", script)
 
 
 def test_start_and_wait(caplog: LogCaptureFixture) -> None:
@@ -54,7 +51,7 @@ def test_repr_and_str() -> None:
     executor = TCPExecutor(nc, "localhost", port=test_port, timeout=5)
     # check proper __str__ and __repr__ rendering:
     assert "TCPExecutor" in repr(executor)
-    assert nc in str(executor)
+    assert sys.executable in str(executor)
 
 
 def test_it_raises_error_on_timeout() -> None:
