@@ -62,7 +62,7 @@ def test_daemons_killing() -> None:
     change the process group ID. This test verifies that daemon process
     is killed after executor's kill().
     """
-    executor = SimpleExecutor((sys.executable, SAMPLE_DAEMON_PATH), shell=True)
+    executor = SimpleExecutor((sys.executable, SAMPLE_DAEMON_PATH))
     executor.start()
     time.sleep(2)
     assert executor.running() is not True, (
