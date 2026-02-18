@@ -3,7 +3,7 @@
 
 import gc
 import shlex
-import signal
+import sys
 import uuid
 from subprocess import check_output
 from typing import List, Union
@@ -13,8 +13,10 @@ import pytest
 
 from mirakuru import Executor
 from mirakuru.base import SimpleExecutor
+from mirakuru.compat import IS_WINDOWS
 from mirakuru.exceptions import ProcessExitedWithError, TimeoutExpired
-from tests import SAMPLE_DAEMON_PATH, ps_aux
+from tests import SAMPLE_DAEMON_PATH, list_processes
+from tests.compat import SIGQUIT
 from tests.retry import retry
 
 SLEEP_300 = "sleep 300"
@@ -44,7 +46,7 @@ def test_command(command: Union[str, List[str]]) -> None:
 
 def test_custom_signal_stop() -> None:
     """Start process and shuts it down using signal SIGQUIT."""
-    executor = SimpleExecutor(SLEEP_300, stop_signal=signal.SIGQUIT)
+    executor = SimpleExecutor(SLEEP_300, stop_signal=SIGQUIT)
     executor.start()
     assert executor.running() is True
     executor.stop()
@@ -56,7 +58,7 @@ def test_stop_custom_signal_stop() -> None:
     executor = SimpleExecutor(SLEEP_300)
     executor.start()
     assert executor.running() is True
-    executor.stop(stop_signal=signal.SIGQUIT)
+    executor.stop(stop_signal=SIGQUIT)
     assert executor.running() is False
 
 
@@ -65,15 +67,16 @@ def test_stop_custom_exit_signal_stop() -> None:
     executor = SimpleExecutor("false", shell=True)
     executor.start()
     # false exits instant, so there should not be a process to stop
-    retry(lambda: executor.stop(stop_signal=signal.SIGQUIT, expected_returncode=-3))
+    retry(lambda: executor.stop(stop_signal=SIGQUIT, expected_returncode=-3))
     assert executor.running() is False
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="Windows does not support false command")
 @pytest.mark.flaky(reruns=5, reruns_delay=1, only_rerun="ProcessFinishedWithError")
 def test_stop_custom_exit_signal_context() -> None:
     """Start a process and expect a custom exit signal in the context manager."""
     with SimpleExecutor("false", expected_returncode=-3, shell=True) as executor:
-        executor.stop(stop_signal=signal.SIGQUIT)
+        executor.stop(stop_signal=SIGQUIT)
         assert executor.running() is False
 
 
@@ -113,17 +116,22 @@ def test_process_output(command: Union[str, List[str]]) -> None:
     executor = SimpleExecutor(command)
     executor.start()
 
-    assert executor.output().read() == "foobar\n"
+    assert executor.output().read() == "foobar\n", f"command was {command!r}"
     executor.stop()
 
 
 @pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
 def test_process_output_shell(command: Union[str, List[str]]) -> None:
-    """Start process, check output and shut it down with shell set to True."""
+    """Start a process, check output and shut it down with shell set to True."""
     executor = SimpleExecutor(command, shell=True)
     executor.start()
 
-    assert executor.output().read().strip() == "foobar"
+    out = executor.output().read().strip()
+    # On Windows when using cmd.exe, echo may preserve quotes around arguments.
+    # Normalize by stripping a single pair of surrounding double quotes.
+    if len(out) >= 2 and out[0] == '"' and out[-1] == '"':
+        out = out[1:-1]
+    assert out == "foobar", f"command was {command!r} and output was {out!r}"
     executor.stop()
 
 
@@ -165,16 +173,20 @@ def test_forgotten_stop() -> None:
     # overwritten.
     # Injecting some flow control (`&&`) forces bash to fork properly.
     marked_command = f"sleep 300 && true #{mark}"
+    if IS_WINDOWS:
+        # On Windows avoid relying on bash/cmd peculiarities. Use Python so the mark
+        # is embedded directly in the command line of the child process, which we can detect.
+        marked_command = f'{sys.executable} -c "import time; time.sleep(300) # {mark}"'
     executor = SimpleExecutor(marked_command, shell=True)
     executor.start()
     assert executor.running() is True
-    ps_output = ps_aux()
+    ps_output = list_processes()
     assert mark in ps_output, (
         f"The test command {marked_command} should be running in \n\n {ps_output}."
     )
     del executor
     gc.collect()  # to force 'del' immediate effect
-    assert mark not in ps_aux(), "The test process should not be running at this point."
+    assert mark not in list_processes(), "The test process should not be running at this point."
 
 
 def test_executor_raises_if_process_exits_with_error() -> None:
@@ -184,7 +196,15 @@ def test_executor_raises_if_process_exits_with_error() -> None:
     should raise an exception.
     """
     error_code = 12
-    failing_executor = Executor(["bash", "-c", f"exit {error_code!s}"], timeout=5)
+    if IS_WINDOWS:
+        cmd_parts = [
+            sys.executable,
+            "-c",
+            f"import sys; sys.exit({error_code!s})",
+        ]
+    else:
+        cmd_parts = ["bash", "-c", f"exit {error_code!s}"]
+    failing_executor = Executor(cmd_parts, timeout=5)
     failing_executor.pre_start_check = mock.Mock(return_value=False)  # type: ignore
     # After-start check will keep returning False to let the process terminate.
     failing_executor.after_start_check = mock.Mock(return_value=False)  # type: ignore
@@ -251,4 +271,4 @@ def test_mirakuru_cleanup() -> None:
                   '
     """
     check_output(shlex.split(cmd.replace("\n", "")))
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in list_processes()

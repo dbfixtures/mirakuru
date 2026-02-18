@@ -3,7 +3,6 @@
 
 import errno
 import os
-import signal
 import sys
 import time
 from typing import NoReturn, Set
@@ -14,14 +13,19 @@ import pytest
 from mirakuru import HTTPExecutor, SimpleExecutor
 from mirakuru.compat import SIGKILL
 from mirakuru.exceptions import ProcessFinishedWithError
-from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, ps_aux
+from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, list_processes
+from tests.compat import SIGQUIT
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="POSIX-specific kill behavior not supported on Windows"
+)
 
 SLEEP_300 = "sleep 300"
 
 
 def test_custom_signal_kill() -> None:
     """Start process and shuts it down using signal SIGQUIT."""
-    executor = SimpleExecutor(SLEEP_300, kill_signal=signal.SIGQUIT)
+    executor = SimpleExecutor(SLEEP_300, kill_signal=SIGQUIT)
     executor.start()
     assert executor.running() is True
     executor.kill()
@@ -33,7 +37,7 @@ def test_kill_custom_signal_kill() -> None:
     executor = SimpleExecutor(SLEEP_300)
     executor.start()
     assert executor.running() is True
-    executor.kill(sig=signal.SIGQUIT)
+    executor.kill(sig=SIGQUIT)
     assert executor.running() is False
 
 
@@ -69,9 +73,9 @@ def test_daemons_killing() -> None:
         "Executor should not have subprocess running as it started a daemon."
     )
 
-    assert SAMPLE_DAEMON_PATH in ps_aux()
+    assert SAMPLE_DAEMON_PATH in list_processes()
     executor.kill()
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in list_processes()
 
 
 def test_stopping_brutally() -> None:
