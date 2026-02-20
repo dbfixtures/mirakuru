@@ -1,11 +1,8 @@
-"""TCPExecutor tests.
-
-Some of these tests run ``nc``: when running Debian, make sure the
-``netcat-openbsd`` package is used, not ``netcat-traditional``.
-"""
+"""TCPExecutor tests."""
 
 import logging
 import socket
+import sys
 
 import pytest
 from _pytest.logging import LogCaptureFixture
@@ -15,7 +12,7 @@ from tests import HTTP_SERVER_CMD
 
 
 # Allocate a random free port to avoid hardcoding and risking hitting an
-# occupied one; then let its number be reused elsewhere (by `nc`).
+# occupied one; then let its number be reused elsewhere (by the listener).
 def _find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("localhost", 0))
@@ -23,9 +20,18 @@ def _find_free_port() -> int:
         return int(s.getsockname()[1])
 
 
-def nc_command(port: int, sleep_seconds: int = 2) -> str:
-    """Construct a command to start a netcat listener on the specified port."""
-    return f'bash -c "sleep {sleep_seconds} && nc -lk {port}"'
+def nc_command(port: int, sleep_seconds: int = 2) -> tuple[str, ...]:
+    """Construct a command to start a TCP listener on the specified port."""
+    # Use Python's socket module instead of nc to avoid depending on netcat.
+    script = (
+        f"import time,socket; time.sleep({sleep_seconds}); "
+        f"s=socket.socket(); "
+        f"s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); "
+        f"s.bind(('',{port})); "
+        f"s.listen(1); "
+        f"time.sleep(300)"
+    )
+    return (sys.executable, "-c", script)
 
 
 def test_start_and_wait(caplog: LogCaptureFixture) -> None:
@@ -45,7 +51,7 @@ def test_repr_and_str() -> None:
     executor = TCPExecutor(nc, "localhost", port=test_port, timeout=5)
     # check proper __str__ and __repr__ rendering:
     assert "TCPExecutor" in repr(executor)
-    assert nc in str(executor)
+    assert sys.executable in str(executor)
 
 
 def test_it_raises_error_on_timeout() -> None:
