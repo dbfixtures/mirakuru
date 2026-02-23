@@ -33,17 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Set up Pipenv on python ${{ matrix.python-version }}
-        uses: fizyk/actions-reuse/.github/actions/pipenv-setup@v4.3.0
+        uses: fizyk/actions-reuse/.github/actions/pipenv-setup@v4.4.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: false
           allow-prereleases: true
       - name: Install oldest supported versions
-        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.3.0
+        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.4.0
         with:
           command: pip install -r oldest-requirements.rq
       - name: Run tests
-        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.3.0
+        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.4.0
         with:
           command: pytest -v --cov --cov-report=xml -n auto --dist loadgroup
       - name: Upload coverage to Codecov
