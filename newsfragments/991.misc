@@ -1,0 +1,1 @@
+Fix flaky test_stop_custom_exit_signal_context test and remove pytest-rerunfailures dependency.
