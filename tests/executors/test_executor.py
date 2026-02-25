@@ -69,10 +69,9 @@ def test_stop_custom_exit_signal_stop() -> None:
     assert executor.running() is False
 
 
-@pytest.mark.flaky(reruns=5, reruns_delay=1, only_rerun="ProcessFinishedWithError")
 def test_stop_custom_exit_signal_context() -> None:
     """Start a process and expect a custom exit signal in the context manager."""
-    with SimpleExecutor("false", expected_returncode=-3, shell=True) as executor:
+    with SimpleExecutor(SLEEP_300, expected_returncode=-3) as executor:
         executor.stop(stop_signal=signal.SIGQUIT)
         assert executor.running() is False
 
