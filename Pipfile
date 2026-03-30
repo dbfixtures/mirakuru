@@ -13,6 +13,6 @@ pytest-cov = "==7.1.0"
 coverage = "==7.13.5"
 python-daemon = "==3.1.2"
 mypy = {version = "==1.19.1", markers="implementation_name == 'cpython'"}
-pygments = "==2.19.2"
+pygments = "==2.20.0"
 tbump = "==6.11.0"
 pytest-xdist = "==3.8.0"
