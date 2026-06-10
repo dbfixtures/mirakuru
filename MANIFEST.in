@@ -1,3 +1,0 @@
-include LICENSE *.rst *.py mirakuru/py.typed
-recursive-include mirakuru/ *.py
-prune tests
