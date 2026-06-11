@@ -1,0 +1,1 @@
+Hardened CI workflows by pinning external workflows/actions to commit hashes instead of mutable version tags.
