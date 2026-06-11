@@ -8,19 +8,21 @@ on:
 
 jobs:
   tests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.4.7
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.11"]'
+      dependency-manager: 'uv'
       pytest_opts: '-n auto --dist loadgroup'
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@v4.4.7
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
     needs: [tests]
     with:
       python-versions: '["3.12", "3.13", "3.14", "pypy-3.11"]'
+      dependency-manager: 'uv'
       pytest_opts: '-n auto --dist loadgroup --basetemp=$RUNNER_TEMP/pt'
-      os: macos-14 # macos-latest is on macos-15 which misbehaves
+      os: macos-14 # macos-latest is on macos-15 which misbehaves'
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   oldest:
@@ -32,18 +34,18 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.11"]
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Pipenv on python ${{ matrix.python-version }}
-        uses: fizyk/actions-reuse/.github/actions/pipenv-setup@v4.4.0
+      - name: Set up UV on python ${{ matrix.python-version }}
+        uses: fizyk/actions-reuse/.github/actions/uv-setup@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
         with:
           python-version: ${{ matrix.python-version }}
           cache: false
           allow-prereleases: true
       - name: Install oldest supported versions
-        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.4.0
+        uses: fizyk/actions-reuse/.github/actions/uv-run@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
         with:
           command: pip install -r oldest-requirements.rq
       - name: Run tests
-        uses: fizyk/actions-reuse/.github/actions/pipenv-run@v4.4.0
+        uses: fizyk/actions-reuse/.github/actions/uv-run@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
         with:
           command: pytest -v --cov --cov-report=xml -n auto --dist loadgroup
       - name: Upload coverage to Codecov

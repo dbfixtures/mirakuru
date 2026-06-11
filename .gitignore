@@ -6,9 +6,6 @@ build
 .coverage
 venv/*
 
-# Pipenv
-Pipfile.lock
-
 .idea/
 atlassian-ide-plugin.xml
 /.pytest_cache/

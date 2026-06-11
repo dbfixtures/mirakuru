@@ -8,4 +8,4 @@ on:
 
 jobs:
   pre-commit:
-    uses: fizyk/actions-reuse/.github/workflows/shared-pre-commit.yml@v4.4.7
+    uses: fizyk/actions-reuse/.github/workflows/shared-pre-commit.yml@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
