@@ -33,13 +33,14 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.11"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Set up UV on python ${{ matrix.python-version }}
         uses: fizyk/actions-reuse/.github/actions/uv-setup@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
         with:
           python-version: ${{ matrix.python-version }}
           cache: false
-          allow-prereleases: true
       - name: Install oldest supported versions
         uses: fizyk/actions-reuse/.github/actions/uv-run@a77b9a9554742fe1ad70b0c0cd589235fd0a60fb # v5.2.1
         with:
@@ -49,7 +50,7 @@ jobs:
         with:
           command: pytest -v --cov --cov-report=xml -n auto --dist loadgroup
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: unittests
