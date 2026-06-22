@@ -47,7 +47,7 @@ dev = [
     "mypy==2.1.0; implementation_name=='cpython'",
     "psutil==7.2.2",
     "pygments==2.20.0",
-    "pytest==9.0.3",
+    "pytest==9.1.0",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
     "python-daemon==3.1.2",
