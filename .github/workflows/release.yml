@@ -10,7 +10,7 @@ on:
 
 jobs:
   release:
-    uses: fizyk/actions-reuse/.github/workflows/shared-release.yml@67c2d834b83f6a05dd0d398d20d21b79f062d7fa # v5.2.2
+    uses: fizyk/actions-reuse/.github/workflows/shared-release.yml@f35c0eab43b88cb5f67a8519eb6dea27146f2145 # v5.2.4
     with:
       version: ${{ inputs.version }}
     secrets:
