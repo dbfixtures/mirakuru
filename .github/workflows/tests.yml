@@ -8,7 +8,7 @@ on:
 
 jobs:
   tests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@67c2d834b83f6a05dd0d398d20d21b79f062d7fa # v5.2.2
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@f35c0eab43b88cb5f67a8519eb6dea27146f2145 # v5.2.4
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "pypy-3.11"]'
       dependency-manager: 'uv'
@@ -16,7 +16,7 @@ jobs:
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@67c2d834b83f6a05dd0d398d20d21b79f062d7fa # v5.2.2
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@f35c0eab43b88cb5f67a8519eb6dea27146f2145 # v5.2.4
     needs: [tests]
     with:
       python-versions: '["3.12", "3.13", "3.14", "3.15", "pypy-3.11"]'
