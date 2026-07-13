@@ -85,6 +85,7 @@ filterwarnings = [ "error" ]
 strict_xfail = true
 
 [tool.tbump]
+
 [[tool.tbump.before_commit]]
 name = "Build changelog"
 cmd = "uv run towncrier build --version {new_version} --yes"
