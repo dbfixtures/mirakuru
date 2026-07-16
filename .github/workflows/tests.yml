@@ -37,7 +37,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up UV on python ${{ matrix.python-version }}
-        uses: fizyk/actions-reuse/.github/actions/uv-setup@9328bd2621a0322c2d7aeb80cd41f53a8771f4ee # v5.2.5
+        uses: fizyk/actions-reuse/.github/actions/uv-setup@e434952f57d1da48b52d0fe5454b365b2f297d2d # v5.2.6
         with:
           python-version: ${{ matrix.python-version }}
           cache: false
