@@ -10,6 +10,9 @@ on:
       - 'Run tests'
       - 'Run tests on macos'
       - 'Test build package'
+  check_suite:
+    types:
+     - completed
 
 jobs:
   automerge:

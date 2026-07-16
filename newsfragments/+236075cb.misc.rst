@@ -1,0 +1,1 @@
+Add completed check_suite to automerge triggers
