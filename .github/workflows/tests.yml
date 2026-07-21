@@ -42,11 +42,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: false
       - name: Install oldest supported versions
-        uses: fizyk/actions-reuse/.github/actions/uv-run@e434952f57d1da48b52d0fe5454b365b2f297d2d # v5.2.6
+        uses: fizyk/actions-reuse/.github/actions/uv-run@5e3ff7b4d544d6b3b8336cdc9c029cff9ab7abb3 # v5.2.7
         with:
           command: pip install -r oldest-requirements.rq
       - name: Run tests
-        uses: fizyk/actions-reuse/.github/actions/uv-run@e434952f57d1da48b52d0fe5454b365b2f297d2d # v5.2.6
+        uses: fizyk/actions-reuse/.github/actions/uv-run@5e3ff7b4d544d6b3b8336cdc9c029cff9ab7abb3 # v5.2.7
         with:
           command: pytest -v --cov --cov-report=xml -n auto --dist loadgroup
       - name: Upload coverage to Codecov
