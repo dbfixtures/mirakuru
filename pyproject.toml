@@ -44,7 +44,7 @@ Changelog = "https://github.com/dbfixtures/mirakuru/blob/v3.0.2/CHANGES.rst"
 
 [dependency-groups]
 dev = [
-    "mypy==2.2.0; implementation_name=='cpython'",
+    "mypy==2.3.0; implementation_name=='cpython'",
     "psutil==7.2.2",
     "pygments==2.20.0",
     "pytest==9.1.1",
