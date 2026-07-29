@@ -5,14 +5,13 @@ on:
     types:
       - completed
     workflows:
-      # List all required workflow names here.
-      - 'Run linters'
       - 'Run tests'
-      - 'Run tests on macos'
       - 'Test build package'
+      - 'Run pre-commit'
+      - 'Run test commands'
   check_suite:
     types:
-     - completed
+      - completed
 
 jobs:
   automerge:

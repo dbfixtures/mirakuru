@@ -1,0 +1,1 @@
+Trigger automerge from the workflows that actually exist
