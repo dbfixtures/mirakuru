@@ -23,7 +23,15 @@ on:
         type: string
         default: '3'
 
-permissions: {}
+# Everything except the comment is read-only, and GITHUB_TOKEN can read all of
+# it - the merger application is only installed with contents, metadata,
+# pull_requests and administration, so asking it for checks or statuses fails
+# the token request outright.
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  statuses: read
 
 jobs:
   nudge:
@@ -37,15 +45,14 @@ jobs:
           client-id: ${{ secrets.MERGE_APP_CLIENT_ID }}
           private-key: ${{ secrets.MERGE_APP_PRIVATE_KEY }}
           permission-pull-requests: write
-          # contents for the default branch tip, checks and statuses for the
-          # rollup - pre-commit.ci reports a commit status, not a check run.
-          permission-contents: read
-          permission-checks: read
-          permission-statuses: read
           permission-metadata: read
       - name: Nudge me!
         env:
-          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          # Reads run as GITHUB_TOKEN; only the comment needs to come from the
+          # merger application, so dependabot sees a command from an account
+          # with write access.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_TOKEN: ${{ steps.generate-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
           DRY_RUN: ${{ inputs.dry-run }}
           # A nudge restarts the whole check matrix, so leave a pull request
@@ -79,7 +86,7 @@ jobs:
           # an unreadable tip or rollup would otherwise silently select nobody.
           tip=$(jq -r '.data.repository.defaultBranchRef.target.oid // empty' pulls.json)
           if [ -z "${tip}" ]; then
-            echo 'Cannot read the default branch tip - token missing contents: read?' >&2
+            echo 'Cannot read the default branch tip - missing contents: read?' >&2
             exit 1
           fi
           jq -r '.data.repository.pullRequests.nodes[]
@@ -113,5 +120,5 @@ jobs:
             if [ "${DRY_RUN:-false}" = 'true' ]; then
               continue
             fi
-            gh pr comment "${number}" --body "@dependabot ${command}"
+            GH_TOKEN="${APP_TOKEN}" gh pr comment "${number}" --body "@dependabot ${command}"
           done < candidates.tsv
