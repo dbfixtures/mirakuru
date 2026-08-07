@@ -26,6 +26,25 @@ from mirakuru.base import SimpleExecutor
 
 IS_DARWIN = platform.system() == "Darwin"
 
+_KB = 1024
+
+PEEK_SIZE = _KB * 64
+"""How many bytes to look at in a single peek into a stream's buffer."""
+
+MAX_CARRY_OVER = _KB * 64
+"""Upper bound on the number of bytes carried over between reads.
+
+Carrying data over is what allows a banner that got split across two reads
+to be matched. See :meth:`OutputExecutor._consume_chunk`.
+"""
+
+DRAIN_TIMEOUT = 50
+"""For how long (in milliseconds) to keep waiting for more data.
+
+Applies while a stream is actively producing output, before control is handed
+back to :meth:`mirakuru.base.SimpleExecutor.wait_for`.
+"""
+
 
 OutputExecutorType = TypeVar("OutputExecutorType", bound="OutputExecutor")
 
@@ -62,6 +81,9 @@ class OutputExecutor(SimpleExecutor):
         except Exception:
             # Fallback: a simple utf-8 encode of provided banner string
             self._banner_bytes = re.compile(str(banner).encode("utf-8"))
+        # Per descriptor remainder of the last, not yet terminated line that
+        # has already been consumed. See `_consume_chunk`.
+        self._carry_over: dict[int, bytes] = {}
         if not any((self._stdout, self._stderr)):
             raise TypeError("At least one of stdout or stderr has to be initialized")
 
@@ -74,6 +96,7 @@ class OutputExecutor(SimpleExecutor):
             in the process output.
         """
         super().start()
+        self._carry_over.clear()
 
         if not IS_DARWIN:
             polls: list[tuple[select.poll, IO[Any]]] = []
@@ -124,13 +147,18 @@ class OutputExecutor(SimpleExecutor):
 
         return self
 
-    def _consume_until_banner_or_block(self, output: IO[Any]) -> tuple[bool, bool]:
-        """Consume available data from a ready stream and check for banner.
+    def _consume_chunk(self, output: IO[Any]) -> tuple[bool, bool]:
+        """Consume one chunk of a ready stream's data and check for banner.
 
-        Returns a pair (found, should_break):
+        Iterating is up to the caller. Must only be called for a descriptor that
+        has been reported readable, as peeking into an empty buffer would block.
+
+        Returns a pair (found, exhausted):
         - found: banner was detected and consumed up to end-of-line.
-        - should_break: no more data immediately available for this descriptor,
-          so the caller's inner draining loop should break.
+        - exhausted: nothing has been consumed, either because no more data is
+          immediately available or because the stream is at its end, so the
+          caller's inner draining loop should break. Only meaningful when the
+          banner has not been found.
         """
         raw = getattr(output, "buffer", None)
         if raw is None:
@@ -141,77 +169,101 @@ class OutputExecutor(SimpleExecutor):
             if self._banner.match(line):
                 return True, True
             return False, False
-        preview = raw.peek(65536)  # 64KB
+        preview = raw.peek(PEEK_SIZE)
         if not preview:
             return False, True
-        m = self._banner_bytes.search(preview)
-        if m is None:
-            to_read = min(len(preview), 8192)  # 8KB
-            _ = raw.read(to_read)
-            return False, False
-        nl_pos = preview.find(b"\n", m.end())
-        if nl_pos == -1:
+        # Prepend the tail of the previously consumed line, so that a banner
+        # spanning two reads is matched instead of being silently dropped.
+        carry_over = self._carry_over.get(output.fileno(), b"")
+        data = carry_over + preview
+
+        match = self._banner_bytes.search(data)
+        newline = -1 if match is None else data.find(b"\n", match.end())
+        if newline == -1:
+            # Either the banner has not shown up yet, or it did but its line is
+            # not terminated yet - in which case everything peeked is part of
+            # that unfinished line. Both cases are safe to consume as a whole,
+            # keeping whatever follows the last newline for the next round.
             _ = raw.read(len(preview))
+            tail = data[data.rfind(b"\n") + 1 :]
+            self._carry_over[output.fileno()] = tail[-MAX_CARRY_OVER:]
             return False, False
-        _ = raw.read(nl_pos + 1)
+        # The carry over never holds a newline, so the one found above is part
+        # of the peeked data. Stop right after it, leaving everything the
+        # process wrote past the banner for the caller to read.
+        _ = raw.read(newline - len(carry_over) + 1)
         return True, True
 
     def _wait_for_darwin_output(self, *fds: IO[Any] | None) -> bool:
-        """Select an implementation to be used on macOS using select().
+        """Look for the banner using select(), on macOS.
 
-        Drain all immediately available data in small chunks from ready
-        descriptors and look for the banner using regex.search on a rolling
-        buffer. This avoids blocking on TextIOWrapper.readline() with partial
-        data and prevents pipe backpressure under heavy pre-banner output.
+        Drains exactly like :meth:`_wait_for_output` does, only driven by
+        select(), because on macOS the presence of `select.poll` depends on the
+        compiler Python was built with.
         """
         # Filter out Nones defensively
         valid_fds = tuple(fd for fd in fds if fd is not None)
         if not valid_fds:
             return False
 
-        found = False
-        # Keep draining while there is data immediately available.
+        drained = False
+        # Keep draining while there is data available.
         while True:
-            rlist, _, _ = select.select(valid_fds, [], [], 0)
+            consumed = False
+            rlist, _, _ = select.select(valid_fds, [], [], DRAIN_TIMEOUT / 1000 if drained else 0)
             if not rlist:
-                break
+                return False
             for output in rlist:
                 while True:
-                    rready, _, _ = select.select([output], [], [], 0)
-                    if not rready:
-                        break
-                    found, should_break = self._consume_until_banner_or_block(output)
+                    found, exhausted = self._consume_chunk(output)
                     if found:
                         return True
-                    if should_break:
+                    if exhausted:
                         break
-                    # else continue draining
-        return found
+                    drained = consumed = True
+                    if not self.check_timeout():
+                        # Do not let a process that never stops writing keep us
+                        # here past the executor's timeout.
+                        return False
+                    rready, _, _ = select.select([output], [], [], DRAIN_TIMEOUT / 1000)
+                    if not rready:
+                        break
+            if not consumed:
+                # Descriptors are readable but yield nothing, they are done.
+                return False
 
     def _wait_for_output(self, *polls: tuple["select.poll", IO[Any]]) -> bool:
-        """Check if output matches banner.
+        """Look for the banner using poll(), on every platform but macOS.
 
-        Drain as much data as available from ready descriptors in bursts using
-        non-blocking chunked reads to avoid stalling on text line buffering.
-        Returns True as soon as the banner is detected using regex.search().
+        Drains the ready descriptors chunk by chunk, returning True as soon as
+        regex.search() spots the banner. Chunked reads keep a partial line from
+        stalling on TextIOWrapper.readline() and keep heavy pre-banner output
+        from filling up the pipe.
 
         .. warning::
             Waiting for I/O completion. It does not work on Windows. Sorry.
         """
-        found = False
-        any_ready = True
-        # Keep draining while something is ready; exit when nothing is immediately ready.
-        while any_ready:
-            any_ready = False
+        drained = False
+        # Keep draining while something is ready; exit when the streams go quiet.
+        while True:
+            consumed = False
             for p, output in polls:
                 # Poll for readiness; when ready, drain in a controlled manner.
-                while p.poll(0):
-                    any_ready = True
-                    found, should_break = self._consume_until_banner_or_block(output)
+                # Once data started flowing, wait a moment for more rather than
+                # returning right away: every return here costs a full
+                # `wait_for` sleep cycle, which throttles draining to about one
+                # pipe buffer per sleep interval.
+                while p.poll(DRAIN_TIMEOUT if drained else 0):
+                    found, exhausted = self._consume_chunk(output)
                     if found:
                         return True
-                    if should_break:
+                    if exhausted:
                         break
-                    # else continue draining
-            # loop continues if any_ready set
-        return found
+                    drained = consumed = True
+                    if not self.check_timeout():
+                        # Do not let a process that never stops writing keep us
+                        # here past the executor's timeout.
+                        return False
+            if not consumed:
+                # Descriptors are quiet or yield nothing, hand back control.
+                return False
