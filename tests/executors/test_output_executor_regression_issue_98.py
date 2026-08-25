@@ -35,11 +35,13 @@ def test_output_executor_handles_large_output_before_banner() -> None:
         "echo BANNER_READY; sleep 100'"
     )
 
-    # Use a reasonably generous timeout to allow draining and detection.
+    # Comfortably above the time draining needs (well under a second), but below
+    # what it took while throttled (~6.5s), so a regression fails here instead of
+    # merely slowing the suite down.
     executor = OutputExecutor(
         command,
         banner="BANNER_READY",
-        timeout=15,
+        timeout=5,
         stdin=None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
