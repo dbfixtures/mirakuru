@@ -4,9 +4,12 @@ on:
     tags:
       - v*
 
+permissions: {}
 
 jobs:
   build:
+    permissions:
+      contents: read  # actions/checkout in the called workflow
     uses: ./.github/workflows/build.yml
 
   publish:
@@ -15,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write
+      id-token: write  # PyPI trusted publishing mints an OIDC token
     steps:
       - name: Download distributions 📦
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

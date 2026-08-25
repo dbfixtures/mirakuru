@@ -40,6 +40,17 @@ repos:
     hooks:
       - id: pyproject-fmt
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.29.0
+    hooks:
+      - id: zizmor
+        args: [--no-progress, --fix]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
   - repo: https://github.com/fizyk/pyproject-validator
     rev: v0.1.0
     hooks:
