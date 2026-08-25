@@ -8,7 +8,7 @@ on:
 
 jobs:
   tests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@bd825c06829614c809e87acac868a1143328a5b4 # v5.3.2
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@42b61e053c1d70a61deb42b323c1a2229e2e7fe0 # v5.5.0
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "pypy-3.11"]'
       dependency-manager: 'uv'
@@ -16,7 +16,7 @@ jobs:
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   macostests:
-    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@bd825c06829614c809e87acac868a1143328a5b4 # v5.3.2
+    uses: fizyk/actions-reuse/.github/workflows/shared-tests-pytests.yml@42b61e053c1d70a61deb42b323c1a2229e2e7fe0 # v5.5.0
     needs: [tests]
     with:
       python-versions: '["3.12", "3.13", "3.14", "3.15", "pypy-3.11"]'
@@ -42,11 +42,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: false
       - name: Install oldest supported versions
-        uses: fizyk/actions-reuse/.github/actions/uv-run@bd825c06829614c809e87acac868a1143328a5b4 # v5.3.2
+        uses: fizyk/actions-reuse/.github/actions/uv-run@42b61e053c1d70a61deb42b323c1a2229e2e7fe0 # v5.5.0
         with:
           command: pip install -r oldest-requirements.rq
       - name: Run tests
-        uses: fizyk/actions-reuse/.github/actions/uv-run@bd825c06829614c809e87acac868a1143328a5b4 # v5.3.2
+        uses: fizyk/actions-reuse/.github/actions/uv-run@42b61e053c1d70a61deb42b323c1a2229e2e7fe0 # v5.5.0
         with:
           command: pytest -v --cov --cov-report=xml -n auto --dist loadgroup
       - name: Upload coverage to Codecov
