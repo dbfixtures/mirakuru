@@ -4,7 +4,7 @@ requires = [ "uv-build>=0.11" ]
 
 [project]
 name = "mirakuru"
-version = "3.0.2"
+version = "3.0.3"
 description = "Process executor (not only) for tests."
 readme = "README.rst"
 keywords = [ "executor", "orchestration", "process", "tests" ]
@@ -40,7 +40,7 @@ email = "fizyk+pypi@fizyk.dev"
 [project.urls]
 Source = "https://github.com/dbfixtures/mirakuru"
 "Bug Tracker" = "https://github.com/dbfixtures/mirakuru/issues"
-Changelog = "https://github.com/dbfixtures/mirakuru/blob/v3.0.2/CHANGES.rst"
+Changelog = "https://github.com/dbfixtures/mirakuru/blob/v3.0.3/CHANGES.rst"
 
 [dependency-groups]
 dev = [
@@ -112,7 +112,7 @@ message_template = "Release {new_version}"
 tag_template = "v{new_version}"
 
 [tool.tbump.version]
-current = "3.0.2"
+current = "3.0.3"
 # Example of a semver regexp.
 # Make sure this matches current_version before
 # using tbump

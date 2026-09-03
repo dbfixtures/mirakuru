@@ -431,7 +431,7 @@ wheels = [
 
 [[package]]
 name = "mirakuru"
-version = "3.0.2"
+version = "3.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "psutil", marker = "sys_platform != 'cygwin'" },

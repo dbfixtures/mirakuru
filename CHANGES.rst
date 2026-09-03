@@ -3,6 +3,38 @@ CHANGELOG
 
 .. towncrier release notes start
 
+mirakuru 3.0.3 (2026-09-03)
+===========================
+
+Bugfixes
+--------
+
+- Fixed OutputExecutor never detecting a banner that gets split across two reads. The
+  tail of an unterminated line is now carried over, instead of being consumed unmatched. (`#1115 <https://github.com/dbfixtures/mirakuru/issues/1115>`_)
+- Fixed OutputExecutor timing out on processes that produce a lot of output before the
+  banner. Draining no longer hands back control as soon as the pipe momentarily runs
+  empty, which used to limit it to roughly one pipe buffer per ``sleep`` interval. (`#1115 <https://github.com/dbfixtures/mirakuru/issues/1115>`_)
+- Fixed OutputExecutor disregarding its timeout and spinning on the closed output when
+  the process ends before the banner appears. (`#1115 <https://github.com/dbfixtures/mirakuru/issues/1115>`_)
+
+
+Miscellaneous
+-------------
+
+- `#988 <https://github.com/dbfixtures/mirakuru/issues/988>`_, `#991 <https://github.com/dbfixtures/mirakuru/issues/991>`_, `#1127 <https://github.com/dbfixtures/mirakuru/issues/1127>`_, `#1132 <https://github.com/dbfixtures/mirakuru/issues/1132>`_, `#1133 <https://github.com/dbfixtures/mirakuru/issues/1133>`_, `#1139 <https://github.com/dbfixtures/mirakuru/issues/1139>`_, `#1156 <https://github.com/dbfixtures/mirakuru/issues/1156>`_
+- Add Python 3.15 to the CI
+- Add completed check_suite to automerge triggers
+- Extend pre-commit with pyproject-fmt to format pyproject.toml
+- Fix automerge action configuration
+- Hardened CI workflows by pinning external workflows/actions to commit hashes instead of mutable version tags.
+- Migrate dev env and build system to uv
+- Migrate to trusted publishing.
+- Nudge stuck dependabot pull requests back into the automerge flow
+- Read pull request state with GITHUB_TOKEN in the dependabot nudge
+- Trigger automerge from the workflows that actually exist
+- Updated actions-reuse for automerge
+
+
 mirakuru 3.0.2 (2026-02-11)
 ===========================
 

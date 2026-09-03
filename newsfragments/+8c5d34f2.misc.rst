@@ -1,1 +1,0 @@
-Read pull request state with GITHUB_TOKEN in the dependabot nudge

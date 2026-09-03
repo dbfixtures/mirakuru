@@ -1,2 +1,0 @@
-Fixed OutputExecutor disregarding its timeout and spinning on the closed output when
-the process ends before the banner appears.

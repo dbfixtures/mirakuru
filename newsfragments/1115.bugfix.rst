@@ -1,3 +1,0 @@
-Fixed OutputExecutor timing out on processes that produce a lot of output before the
-banner. Draining no longer hands back control as soon as the pipe momentarily runs
-empty, which used to limit it to roughly one pipe buffer per ``sleep`` interval.
