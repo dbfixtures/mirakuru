@@ -51,8 +51,10 @@ dev = [
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
     "python-daemon==3.1.2",
-    "tbump==6.11.0",
     "towncrier==25.8.0",
+]
+release = [
+    "tbump==6.11.0",
 ]
 
 [tool.uv.build-backend]
