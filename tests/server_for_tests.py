@@ -119,10 +119,7 @@ class SlowPostKeyServerHandler(SlowServerHandler):
 class HangingServerHandler(BaseHTTPRequestHandler):
     """Accept the connection and then never answer it.
 
-    Mimics a process that is already up on the TCP level but wedged before it
-    can produce any HTTP response at all - a deadlocked thread pool, a stalled
-    JVM, a runtime stuck in GC. The socket stays open, so the client sits in
-    ``getresponse()`` until its own timeout fires.
+    Mimics a process taking forever to respond, hanging from the test point of view.
     """
 
     def do_GET(self) -> None:  # pylint:disable=invalid-name

@@ -62,8 +62,9 @@ class HTTPExecutor(TCPExecutor):
         :param dict payload: Payload to send along the request
         :param dict headers:
         :param float request_timeout: number of seconds a single check request
-            may take before it is given up on and retried. Defaults to the
-            executor's own **timeout**.
+            may take before it is given up on and retried. ``None`` or ``0``
+            falls back to the executor's own **timeout**, a negative value is
+            rejected.
         :param int timeout: number of seconds to wait for the process to start
             or stop.
         :param float sleep: how often to check for start/stop condition
@@ -82,6 +83,9 @@ class HTTPExecutor(TCPExecutor):
 
         if not self.url.hostname:
             raise ValueError("Url provided does not contain hostname")
+
+        if request_timeout is not None and request_timeout < 0:
+            raise ValueError(f"request_timeout must not be negative, got {request_timeout}")
 
         port = self.url.port
         if port is None:

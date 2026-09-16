@@ -289,6 +289,10 @@ def test_hanging_server_request_timeout() -> None:
         # no deadline set yet: only the executor's timeout applies
         (None, 10, math.inf, 10),
         (2, 10, math.inf, 2),
+        # 0 reads as unset, same as None
+        (0, 10, math.inf, 10),
+        # fractional timeouts pass through untouched
+        (0.5, 10, math.inf, 0.5),
     ),
 )
 def test_check_connection_timeout(
@@ -347,3 +351,26 @@ def test_check_connection_timeout_without_deadline() -> None:
         assert executor.after_start_check() is True
 
     assert connection_mock.call_args.kwargs["timeout"] == 10
+
+
+def test_negative_request_timeout() -> None:
+    """Check that a negative request timeout is rejected on construction.
+
+    ``socket.settimeout`` would otherwise raise ``ValueError`` on the first
+    check instead - well past the point where the mistake is easy to place,
+    and out of reach of `after_start_check`'s own ``except`` clause, which
+    only covers ``OSError`` and ``HTTPException``.
+    """
+    with pytest.raises(ValueError, match="request_timeout must not be negative"):
+        HTTPExecutor(HTTP_NORMAL_CMD, f"http://{HOST}:{PORT}/", request_timeout=-1)
+
+
+def test_url_without_hostname() -> None:
+    """Check that a url with no hostname is rejected on construction.
+
+    Also covers the half-built executor this leaves behind: ``__init__`` raises
+    before `SimpleExecutor.__init__` has set ``process``, so ``__del__`` has to
+    cope with the attribute being absent.
+    """
+    with pytest.raises(ValueError, match="does not contain hostname"):
+        HTTPExecutor(HTTP_NORMAL_CMD, "http:///nohost")

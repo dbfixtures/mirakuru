@@ -470,7 +470,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
     def __del__(self) -> None:
         """Cleanup subprocesses created during Executor lifetime."""
         try:
-            if self.process:
+            if getattr(self, "process", None):
                 self.kill()
         except Exception:  # pragma: no cover
             print("*" * 80)
