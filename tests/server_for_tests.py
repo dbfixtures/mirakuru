@@ -23,6 +23,9 @@ sys.path.append(os.getcwd())
 
 from tests.signals import block_signals  # noqa: E402
 
+HANG_TIME = 3600
+"""Seconds the hanging handler sits on a request, i.e. forever as far as a test cares."""
+
 
 class SlowServerHandler(BaseHTTPRequestHandler):
     """Slow server handler."""
@@ -113,11 +116,30 @@ class SlowPostKeyServerHandler(SlowServerHandler):
         self.end_headers()
 
 
+class HangingServerHandler(BaseHTTPRequestHandler):
+    """Accept the connection and then never answer it.
+
+    Mimics a process that is already up on the TCP level but wedged before it
+    can produce any HTTP response at all - a deadlocked thread pool, a stalled
+    JVM, a runtime stuck in GC. The socket stays open, so the client sits in
+    ``getresponse()`` until its own timeout fires.
+    """
+
+    def do_GET(self) -> None:  # pylint:disable=invalid-name
+        """Never serve the GET request."""
+        time.sleep(HANG_TIME)
+
+    def do_HEAD(self) -> None:  # pylint:disable=invalid-name
+        """Never serve the HEAD request."""
+        time.sleep(HANG_TIME)
+
+
 HANDLERS = {
     "HEAD": SlowServerHandler,
     "GET": SlowGetServerHandler,
     "POST": SlowPostServerHandler,
     "Key": SlowPostKeyServerHandler,
+    "Hang": HangingServerHandler,
 }
 
 if __name__ == "__main__":

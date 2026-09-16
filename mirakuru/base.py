@@ -20,6 +20,7 @@
 import atexit
 import errno
 import logging
+import math
 import os
 import platform
 import shlex
@@ -134,8 +135,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             for the first check, the second check will only have 5 seconds left.
 
             Your executor will raise an exception if something goes wrong
-            during this time. The default value of timeout is ``None``, so it
-            is a good practice to set this.
+            during this time. The default of ``3600`` seconds is a backstop
+            rather than a sensible wait, so it is good practice to set it to
+            something your process should comfortably fit within.
 
         """
         if isinstance(command, (list, tuple)):
@@ -269,9 +271,14 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
 
     @property
     def _remaining_timeout(self) -> float:
-        """Return the remaining timeout."""
+        """Return the number of seconds left until the deadline.
+
+        Returns ``math.inf`` when no deadline is set, so that an unset
+        deadline reads as "no timeout" rather than as an expired one, and
+        never goes below zero once the deadline has passed.
+        """
         if self._endtime is None:
-            return 0
+            return math.inf
         return max(self._endtime - time.time(), 0)
 
     def _clear_process(self) -> None:
@@ -447,17 +454,18 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         raise TimeoutExpired(self, timeout=self._timeout)
 
     def check_timeout(self) -> bool:
-        """Check if timeout has expired.
+        """Check whether there is still time left to wait.
 
-        Returns True if there is no timeout set or the timeout has not expired.
-        Kills the process and raises TimeoutExpired exception otherwise.
+        This method should be used in while loops waiting for some data. It
+        only reports on the deadline - stopping the process and raising
+        :class:`~mirakuru.exceptions.TimeoutExpired` is up to the caller, as
+        :meth:`wait_for` does.
 
-        This method should be used in while loops waiting for some data.
-
-        :return: True if timeout expired, False if not
+        :return: True if no timeout is set or it has not expired yet,
+            False once it has
         :rtype: bool
         """
-        return self._endtime is None or time.time() <= self._endtime
+        return self._remaining_timeout > 0
 
     def __del__(self) -> None:
         """Cleanup subprocesses created during Executor lifetime."""

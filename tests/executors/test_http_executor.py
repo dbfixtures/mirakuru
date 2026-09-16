@@ -1,11 +1,14 @@
 """HTTP Executor tests."""
 
+import math
 import socket
 import sys
+import threading
+import time
 from functools import partial
 from http.client import OK, HTTPConnection
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 
@@ -17,6 +20,10 @@ PORT = 7987
 
 HTTP_NORMAL_CMD = f"{HTTP_SERVER_CMD} {PORT}"
 HTTP_SLOW_CMD = f"{sys.executable} {TEST_SERVER_PATH} {HOST}:{PORT}"
+HTTP_HANGING_CMD = f"{sys.executable} {TEST_SERVER_PATH} {HOST}:{PORT} False Hang"
+
+HANG_DEADLINE = 30
+"""Wall clock bound for the hanging-server tests, well above their own timeouts."""
 
 pytestmark = pytest.mark.xdist_group(name=f"http-port-{PORT}")
 
@@ -199,3 +206,144 @@ def test_http_status_codes(accepted_status: None | int | str, expected_timeout: 
         with pytest.raises(TimeoutExpired):
             executor.start()
             executor.stop()
+
+
+def start_bounded(executor: HTTPExecutor, deadline: float) -> None:
+    """Run ``executor.start()`` on a daemon thread and fail if it outlives deadline.
+
+    #1175 is a hang, so an unbounded ``start()`` would take the whole test run
+    down with it rather than report a failure. The thread is a daemon so that
+    pytest can still exit while a regressed ``start()`` is stuck in the socket.
+    """
+    error: list[BaseException] = []
+
+    def run() -> None:
+        try:
+            executor.start()
+        except BaseException as err:  # pylint:disable=broad-except
+            error.append(err)
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    thread.join(deadline)
+    assert not thread.is_alive(), f"executor.start() still blocked after {deadline}s"
+    if error:
+        raise error[0]
+
+
+def test_hanging_server_times_out() -> None:
+    """Check that a server which never answers does not wedge the executor.
+
+    Regression test for #1175: the check connection used to be opened without
+    any timeout, so ``getresponse()`` blocked forever and ``wait_for`` never
+    regained control to notice its own deadline had passed.
+    """
+    executor = HTTPExecutor(HTTP_HANGING_CMD, f"http://{HOST}:{PORT}/", timeout=2)
+
+    start = time.time()
+    try:
+        with pytest.raises(TimeoutExpired):
+            start_bounded(executor, deadline=HANG_DEADLINE)
+    finally:
+        executor.kill()
+    elapsed = time.time() - start
+
+    assert executor.running() is False
+    # The executor spends its whole budget retrying, but not a lot more.
+    assert 2 <= elapsed < HANG_DEADLINE
+
+
+def test_hanging_server_request_timeout() -> None:
+    """Check that `request_timeout` bounds a single check, not the whole wait.
+
+    With a per-request timeout well below the executor's own budget the check
+    gets retried a few times and only then the executor gives up.
+    """
+    executor = HTTPExecutor(
+        HTTP_HANGING_CMD, f"http://{HOST}:{PORT}/", timeout=4, request_timeout=1
+    )
+
+    start = time.time()
+    try:
+        with pytest.raises(TimeoutExpired):
+            start_bounded(executor, deadline=HANG_DEADLINE)
+    finally:
+        executor.kill()
+    elapsed = time.time() - start
+
+    assert executor.running() is False
+    assert 4 <= elapsed < HANG_DEADLINE
+
+
+@pytest.mark.parametrize(
+    ("request_timeout", "timeout", "remaining", "expected"),
+    (
+        # no request_timeout: the executor's own budget bounds the connection
+        (None, 10, 10.0, 10),
+        # ... and so does whatever is left of it
+        (None, 10, 2.5, 2.5),
+        # an explicit request_timeout wins while it is the shorter one
+        (1, 10, 10.0, 1),
+        # ... but never lets a single check outlive the remaining budget
+        (30, 10, 4.0, 4.0),
+        # no deadline set yet: only the executor's timeout applies
+        (None, 10, math.inf, 10),
+        (2, 10, math.inf, 2),
+    ),
+)
+def test_check_connection_timeout(
+    request_timeout: int | None,
+    timeout: int,
+    remaining: float,
+    expected: float,
+) -> None:
+    """Check the timeout `after_start_check` arms the check connection with."""
+    executor = HTTPExecutor(
+        HTTP_NORMAL_CMD,
+        f"http://{HOST}:{PORT}/",
+        timeout=timeout,
+        request_timeout=request_timeout,
+    )
+
+    with (
+        patch.object(
+            HTTPExecutor, "_remaining_timeout", new_callable=PropertyMock
+        ) as remaining_mock,
+        patch("mirakuru.http.HTTPConnection") as connection_mock,
+    ):
+        remaining_mock.return_value = remaining
+        connection_mock.return_value.getresponse.return_value.status = 200
+
+        assert executor.after_start_check() is True
+
+    assert connection_mock.call_args.kwargs["timeout"] == expected
+
+
+def test_check_connection_timeout_expires() -> None:
+    """Check that a check connection timing out is reported as 'not started yet'."""
+    executor = HTTPExecutor(HTTP_NORMAL_CMD, f"http://{HOST}:{PORT}/", timeout=10)
+
+    with patch("mirakuru.http.HTTPConnection") as connection_mock:
+        connection_mock.return_value.getresponse.side_effect = socket.timeout
+
+        assert executor.after_start_check() is False
+
+
+def test_check_connection_timeout_without_deadline() -> None:
+    """Check that a check run outside a start/stop wait still blocks normally.
+
+    ``after_start_check`` is public, and until ``start()`` sets a deadline the
+    remaining timeout is infinite - so the connection has to fall back to the
+    executor's own timeout. A 0 here would put the socket in non-blocking mode
+    and make every check fail with ``BlockingIOError``.
+    """
+    executor = HTTPExecutor(HTTP_NORMAL_CMD, f"http://{HOST}:{PORT}/", timeout=10)
+
+    assert executor._endtime is None
+
+    with patch("mirakuru.http.HTTPConnection") as connection_mock:
+        connection_mock.return_value.getresponse.return_value.status = 200
+
+        assert executor.after_start_check() is True
+
+    assert connection_mock.call_args.kwargs["timeout"] == 10

@@ -2,6 +2,7 @@
 """Test basic executor functionality."""
 
 import gc
+import math
 import shlex
 import signal
 import uuid
@@ -251,3 +252,63 @@ def test_mirakuru_cleanup() -> None:
     """
     check_output(shlex.split(cmd.replace("\n", "")))
     assert SAMPLE_DAEMON_PATH not in ps_aux()
+
+
+def test_remaining_timeout() -> None:
+    """Check that the remaining timeout shrinks along with the wait."""
+    executor = SimpleExecutor(SLEEP_300, timeout=5)
+
+    executor.start()
+    try:
+        assert executor._remaining_timeout == pytest.approx(5, abs=0.5)
+
+        with mock.patch("mirakuru.base.time.time", return_value=executor._endtime - 2):
+            assert executor._remaining_timeout == 2
+    finally:
+        executor.stop()
+
+
+def test_remaining_timeout_does_not_go_negative() -> None:
+    """Check that the remaining timeout is clamped once the deadline has passed."""
+    executor = SimpleExecutor(SLEEP_300, timeout=5)
+
+    executor.start()
+    try:
+        with mock.patch("mirakuru.base.time.time", return_value=executor._endtime + 10):
+            assert executor._remaining_timeout == 0
+            assert executor.check_timeout() is False
+    finally:
+        executor.stop()
+
+
+def test_remaining_timeout_without_deadline() -> None:
+    """Check that an executor with no deadline set has no timeout to run down.
+
+    ``check_timeout`` reads a ``None`` ``_endtime`` as "wait indefinitely", so
+    the remaining timeout has to agree with it rather than report 0 seconds
+    left.
+    """
+    executor = SimpleExecutor(SLEEP_300, timeout=5)
+
+    assert executor._endtime is None
+    assert executor._remaining_timeout == math.inf
+    assert executor.check_timeout() is True
+
+
+def test_check_timeout_implies_time_left() -> None:
+    """Check that a live timeout always leaves a non-zero amount of it.
+
+    Callers derive a budget from ``_remaining_timeout`` while ``check_timeout``
+    holds - `HTTPExecutor.after_start_check` arms its connection with it - and
+    a 0 there means "don't block at all" rather than "no time left".
+    """
+    executor = SimpleExecutor(SLEEP_300, timeout=5)
+
+    executor.start()
+    try:
+        for offset in (0, 1, 4.999, 5, 6):
+            with mock.patch("mirakuru.base.time.time", return_value=executor._endtime - offset):
+                if executor.check_timeout():
+                    assert executor._remaining_timeout > 0
+    finally:
+        executor.stop()

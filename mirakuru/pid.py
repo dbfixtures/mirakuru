@@ -45,7 +45,7 @@ class PidExecutor(Executor):
         :param str filename: the file which is to exist
         :param bool shell: same as the `subprocess.Popen` shell definition
         :param int timeout: number of seconds to wait for the process to start
-            or stop. If None or False, wait indefinitely.
+            or stop.
         :param float sleep: how often to check for start/stop condition
         :param int sig_stop: signal used to stop process run by the executor.
             default is `signal.SIGTERM`

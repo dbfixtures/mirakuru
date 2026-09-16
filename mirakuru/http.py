@@ -43,7 +43,7 @@ class HTTPExecutor(TCPExecutor):
         method: str = "HEAD",
         payload: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
-        request_timeout: int | None = None,
+        request_timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize HTTPExecutor executor.
@@ -61,8 +61,11 @@ class HTTPExecutor(TCPExecutor):
             Defaults to HEAD.
         :param dict payload: Payload to send along the request
         :param dict headers:
+        :param float request_timeout: number of seconds a single check request
+            may take before it is given up on and retried. Defaults to the
+            executor's own **timeout**.
         :param int timeout: number of seconds to wait for the process to start
-            or stop. If None or False, wait indefinitely.
+            or stop.
         :param float sleep: how often to check for start/stop condition
         :param int sig_stop: signal used to stop process run by the executor.
             default is `signal.SIGTERM`
