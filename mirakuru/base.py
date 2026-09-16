@@ -267,6 +267,13 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         """Set timeout for possible wait."""
         self._endtime = time.time() + self._timeout
 
+    @property
+    def _remaining_timeout(self) -> float:
+        """Return the remaining timeout."""
+        if self._endtime is None:
+            return 0
+        return max(self._endtime - time.time(), 0)
+
     def _clear_process(self) -> None:
         """Close stdin/stdout of subprocess.
 

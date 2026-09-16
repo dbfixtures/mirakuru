@@ -1,0 +1,2 @@
+`HTTPExecutor.after_start_check` had a blocking connection check.
+Now it uses either new request_timeout constructor or executor's timeout value.

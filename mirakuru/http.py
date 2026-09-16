@@ -43,6 +43,7 @@ class HTTPExecutor(TCPExecutor):
         method: str = "HEAD",
         payload: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
+        request_timeout: int | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize HTTPExecutor executor.
@@ -88,12 +89,17 @@ class HTTPExecutor(TCPExecutor):
         self.method = method
         self.payload = payload
         self.headers = headers
+        self._request_timeout = request_timeout
 
         super().__init__(command, host=self.url.hostname, port=port, **kwargs)
 
     def after_start_check(self) -> bool:
-        """Check if defined URL returns expected status to a check request."""
-        conn = HTTPConnection(self.host, self.port)
+        """Check if defined URL returns the expected status to a check request."""
+        conn = HTTPConnection(
+            host=self.host,
+            port=self.port,
+            timeout=min(self._request_timeout or self._timeout, self._remaining_timeout),
+        )
         try:
             body = urlencode(self.payload) if self.payload else None
             headers = self.headers if self.headers else {}
