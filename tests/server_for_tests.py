@@ -13,10 +13,13 @@ Example usage:
 """
 
 import ast
+import functools
 import os
 import sys
 import time
+from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any
 from urllib.parse import parse_qs
 
 sys.path.append(os.getcwd())
@@ -116,6 +119,41 @@ class SlowPostKeyServerHandler(SlowServerHandler):
         self.end_headers()
 
 
+REQUEST_TARGET = {
+    1: "/check;mode=full?status=ready&wait=1s",
+    2: "/?status=ready&wait=1s",
+}
+"""The request targets `RequestTargetServerHandler` answers 200 to."""
+
+REQUEST_URL_PART = {
+    1: REQUEST_TARGET[1],
+    2: REQUEST_TARGET[2].removeprefix("/"),
+}
+"""What an url carries for each target.
+
+Target 2 has no path at all, so the executor is the one that has to turn it
+into the origin-form ``/?query`` the server waits for.
+"""
+
+
+class RequestTargetServerHandler(BaseHTTPRequestHandler):
+    """Answer 200 only for one exact request target.
+
+    Anything the client drops on the way - the query string, the ``;params``,
+    or anything it adds, like a fragment - turns the response into a 500.
+    """
+
+    def __init__(self, *args: Any, target: str = REQUEST_TARGET[1], **kwargs: Any) -> None:
+        """Assign request target."""
+        self.target = target
+        super().__init__(*args, **kwargs)
+
+    def do_HEAD(self) -> None:  # pylint:disable=invalid-name
+        """Serve HEAD request, comparing the request target."""
+        self.send_response(200 if self.path == self.target else 500)
+        self.end_headers()
+
+
 class HangingServerHandler(BaseHTTPRequestHandler):
     """Accept the connection and then never answer it.
 
@@ -131,16 +169,19 @@ class HangingServerHandler(BaseHTTPRequestHandler):
         time.sleep(HANG_TIME)
 
 
-HANDLERS = {
+HANDLERS: dict[str, Callable[..., BaseHTTPRequestHandler]] = {
     "HEAD": SlowServerHandler,
     "GET": SlowGetServerHandler,
     "POST": SlowPostServerHandler,
     "Key": SlowPostKeyServerHandler,
     "Hang": HangingServerHandler,
+    "Target1": functools.partial(RequestTargetServerHandler, target=REQUEST_TARGET[1]),
+    "Target2": functools.partial(RequestTargetServerHandler, target=REQUEST_TARGET[2]),
 }
 
 if __name__ == "__main__":
     HOST, PORT, IMMORTAL, METHOD = "127.0.0.1", "8000", "False", "HEAD"
+    target_key = 1
     if len(sys.argv) >= 2:
         HOST, PORT = sys.argv[1].split(":")
 

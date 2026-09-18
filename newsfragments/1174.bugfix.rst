@@ -1,0 +1,3 @@
+`HTTPExecutor` no longer drops the query string and the ``;params`` from the
+url it checks - the whole request target, fragment aside, is now sent. Hence
+`HTTPExecutor.url` now holds an `urlsplit` result rather than a `urlparse` one.

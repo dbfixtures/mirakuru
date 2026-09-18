@@ -22,7 +22,7 @@ import socket
 from http.client import HTTPConnection, HTTPException
 from logging import getLogger
 from typing import Any
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from mirakuru.tcp import TCPExecutor
 
@@ -50,7 +50,10 @@ class HTTPExecutor(TCPExecutor):
 
         :param (str, list) command: command to be run by the subprocess
         :param str url: URL that executor checks to verify
-            if process has already started.
+            if process has already started. Its path, ``;params`` and query
+            string are all sent as the request target, so a parametrised
+            readiness endpoint can be checked. A fragment, being client-side
+            only, is ignored.
         :param bool shell: same as the `subprocess.Popen` shell definition
         :param str|int status: HTTP status code(s) that an endpoint must
             return for the executor being considered as running. This argument
@@ -74,9 +77,9 @@ class HTTPExecutor(TCPExecutor):
             default is `signal.SIGKILL`
 
         """
-        self.url = urlparse(url)
+        self.url = urlsplit(url)
         """
-        An :func:`urlparse.urlparse` representation of an url.
+        An :func:`urllib.parse.urlsplit` representation of an url.
 
         It'll be used to check process status on.
         """
@@ -112,7 +115,10 @@ class HTTPExecutor(TCPExecutor):
             headers = self.headers if self.headers else {}
             conn.request(
                 self.method,
-                self.url.path,
+                # An empty path has to become "/", or a query-only url would
+                # send "?query" instead of an origin-form target.
+                # The fragment is client-side only and never goes on the wire.
+                urlunsplit(("", "", self.url.path or "/", self.url.query, "")),
                 body,
                 headers,
             )
