@@ -1,3 +1,0 @@
-`SimpleExecutor.__del__` raised `AttributeError` for an executor whose
-`__init__` failed before the base class ran - as `HTTPExecutor` does when it
-rejects its url or its `request_timeout`.

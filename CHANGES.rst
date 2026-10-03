@@ -3,6 +3,28 @@ CHANGELOG
 
 .. towncrier release notes start
 
+mirakuru 3.0.4 (2026-10-03)
+===========================
+
+Bugfixes
+--------
+
+- `HTTPExecutor` no longer drops the query string and the ``;params`` from the
+  url it checks - the whole request target, fragment aside, is now sent. Hence
+  `HTTPExecutor.url` now holds an `urlsplit` result rather than a `urlparse` one. (`#1174 <https://github.com/dbfixtures/mirakuru/issues/1174>`_)
+- `HTTPExecutor.after_start_check` had a blocking connection check.
+  Now it uses either new request_timeout constructor or executor's timeout value. (`#1175 <https://github.com/dbfixtures/mirakuru/issues/1175>`_)
+- `SimpleExecutor.__del__` raised `AttributeError` for an executor whose
+  `__init__` failed before the base class ran - as `HTTPExecutor` does when it
+  rejects its url or its `request_timeout`. (`#1175 <https://github.com/dbfixtures/mirakuru/issues/1175>`_)
+
+
+Miscellaneous
+-------------
+
+- `#1166 <https://github.com/dbfixtures/mirakuru/issues/1166>`_, `#1182 <https://github.com/dbfixtures/mirakuru/issues/1182>`_, `#1186 <https://github.com/dbfixtures/mirakuru/issues/1186>`_
+
+
 mirakuru 3.0.3 (2026-09-03)
 ===========================
 

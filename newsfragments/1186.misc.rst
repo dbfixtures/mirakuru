@@ -1,1 +1,0 @@
-Switch build's workflow dependency-manager to uv
