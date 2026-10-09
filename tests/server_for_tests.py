@@ -34,7 +34,7 @@ class SlowServerHandler(BaseHTTPRequestHandler):
     """Slow server handler."""
 
     timeout = 2
-    endtime = None
+    endtime: float | None = None
 
     def do_GET(self) -> None:  # pylint:disable=invalid-name
         """Serve GET request."""

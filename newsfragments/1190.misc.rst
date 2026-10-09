@@ -1,0 +1,1 @@
+Fix test code type hints with mypy 2.4.0
