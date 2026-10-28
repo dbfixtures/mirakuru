@@ -6,7 +6,7 @@ import os
 import signal
 import sys
 import time
-from typing import NoReturn, Set
+from typing import NoReturn
 from unittest.mock import patch
 
 import pytest
@@ -111,7 +111,7 @@ def test_stopping_children_of_stopped_process() -> None:
         os_error.errno = errno.ESRCH
         raise os_error
 
-    def processes_with_env_mock(*_: str, **__: str) -> Set[int]:
+    def processes_with_env_mock(*_: str, **__: str) -> set[int]:
         return {1}
 
     with (

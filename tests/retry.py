@@ -1,8 +1,9 @@
 """Small retry callable in case of specific error occurred."""
 
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from time import sleep
-from typing import Callable, Type, TypeVar
+from typing import TypeVar
 
 from mirakuru import ExecutorError
 
@@ -12,10 +13,10 @@ T = TypeVar("T")
 def retry(
     func: Callable[[], T],
     timeout: int = 60,
-    possible_exception: Type[Exception] = ExecutorError,
+    possible_exception: type[Exception] = ExecutorError,
 ) -> T:
     """Attempt to retry the function for timeout time."""
-    time: datetime = datetime.now(timezone.utc)
+    time: datetime = datetime.now(UTC)
     timeout_diff: timedelta = timedelta(seconds=timeout)
     i = 0
     while True:
@@ -24,6 +25,6 @@ def retry(
             res = func()
             return res
         except possible_exception as e:
-            if time + timeout_diff < datetime.now(timezone.utc):
-                raise TimeoutError("Failed after {i} attempts".format(i=i)) from e
+            if time + timeout_diff < datetime.now(UTC):
+                raise TimeoutError(f"Failed after {i} attempts") from e
             sleep(1)
