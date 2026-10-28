@@ -18,7 +18,6 @@
 """HTTP enabled process executor."""
 
 import re
-import socket
 from http.client import HTTPConnection, HTTPException
 from logging import getLogger
 from typing import Any
@@ -131,6 +130,6 @@ class HTTPExecutor(TCPExecutor):
                 return True
             return False
 
-        except (HTTPException, socket.timeout, socket.error) as ex:
+        except (TimeoutError, OSError, HTTPException) as ex:
             LOG.debug("Encounter %s while trying to check if service has started.", ex)
             return False

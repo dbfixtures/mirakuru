@@ -52,7 +52,7 @@ def processes_with_env_psutil(env_name: str, env_value: str) -> set[int]:
     for proc in psutil.process_iter():
         try:
             pinfo = proc.as_dict(attrs=["pid", "environ"])
-        except (psutil.NoSuchProcess, IOError):
+        except (OSError, psutil.NoSuchProcess):
             # can't do much if psutil is not able to get this process details
             continue
         except (psutil.AccessDenied, PermissionError, SystemError):

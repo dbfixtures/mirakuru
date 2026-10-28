@@ -19,7 +19,7 @@
 
 import logging
 import socket
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from mirakuru import Executor
 
@@ -35,7 +35,7 @@ class UnixSocketExecutor(Executor):
 
     def __init__(
         self,
-        command: Union[str, List[str], Tuple[str, ...]],
+        command: str | list[str] | tuple[str, ...],
         socket_name: str,
         **kwargs: Any,
     ) -> None:
@@ -67,7 +67,7 @@ class UnixSocketExecutor(Executor):
         try:
             exec_sock.connect(self.socket)
             return True
-        except socket.error as msg:
+        except OSError as msg:
             LOG.debug("Can not connect to socket: %s", msg)
             return False
         finally:

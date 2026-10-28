@@ -20,7 +20,7 @@
 import platform
 import re
 import select
-from typing import IO, Any, TypeVar
+from typing import IO, Any, Self, TypeVar
 
 from mirakuru.base import SimpleExecutor
 
@@ -87,7 +87,7 @@ class OutputExecutor(SimpleExecutor):
         if not any((self._stdout, self._stderr)):
             raise TypeError("At least one of stdout or stderr has to be initialized")
 
-    def start(self: OutputExecutorType) -> OutputExecutorType:
+    def start(self) -> Self:
         """Start the process.
 
         .. note::

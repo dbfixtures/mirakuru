@@ -70,7 +70,7 @@ class TCPExecutor(Executor):
             sock = socket.socket()
             sock.connect((self.host, self.port))
             return True
-        except (socket.error, socket.timeout):
+        except (TimeoutError, OSError):
             return False
         finally:
             # close socket manually for sake of PyPy

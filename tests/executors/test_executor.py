@@ -7,7 +7,6 @@ import shlex
 import signal
 import uuid
 from subprocess import check_output
-from typing import List, Union
 from unittest import mock
 
 import pytest
@@ -22,7 +21,7 @@ SLEEP_300 = "sleep 300"
 
 
 @pytest.mark.parametrize("command", (SLEEP_300, SLEEP_300.split()))
-def test_running_process(command: Union[str, List[str]]) -> None:
+def test_running_process(command: str | list[str]) -> None:
     """Start process and shuts it down."""
     executor = SimpleExecutor(command)
     executor.start()
@@ -36,7 +35,7 @@ def test_running_process(command: Union[str, List[str]]) -> None:
 
 
 @pytest.mark.parametrize("command", (SLEEP_300, SLEEP_300.split()))
-def test_command(command: Union[str, List[str]]) -> None:
+def test_command(command: str | list[str]) -> None:
     """Check that the command and command parts are equivalent."""
     executor = SimpleExecutor(command)
     assert executor.command == SLEEP_300
@@ -108,7 +107,7 @@ ECHO_FOOBAR = 'echo "foobar"'
 
 
 @pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
-def test_process_output(command: Union[str, List[str]]) -> None:
+def test_process_output(command: str | list[str]) -> None:
     """Start a process, check output and shut it down."""
     executor = SimpleExecutor(command)
     executor.start()
@@ -118,7 +117,7 @@ def test_process_output(command: Union[str, List[str]]) -> None:
 
 
 @pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
-def test_process_output_shell(command: Union[str, List[str]]) -> None:
+def test_process_output_shell(command: str | list[str]) -> None:
     """Start process, check output and shut it down with shell set to True."""
     executor = SimpleExecutor(command, shell=True)
     executor.start()
