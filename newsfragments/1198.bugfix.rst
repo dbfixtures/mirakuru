@@ -1,0 +1,1 @@
+Fix ``AlreadyRunning`` string representation raising ``AttributeError`` for executors without a port, such as ``PidExecutor``.
