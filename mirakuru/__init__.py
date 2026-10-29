@@ -31,6 +31,7 @@ from mirakuru.http import HTTPExecutor
 from mirakuru.output import OutputExecutor
 from mirakuru.pid import PidExecutor
 from mirakuru.tcp import TCPExecutor
+from mirakuru.unixsocket import UnixSocketExecutor
 
 __version__ = "3.0.4"
 
@@ -41,6 +42,7 @@ __all__ = (
     "TCPExecutor",
     "HTTPExecutor",
     "PidExecutor",
+    "UnixSocketExecutor",
     "ExecutorError",
     "TimeoutExpired",
     "AlreadyRunning",

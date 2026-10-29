@@ -11,6 +11,7 @@ def test_importing_mirakuru() -> None:
     assert "TCPExecutor" in globals()
     assert "HTTPExecutor" in globals()
     assert "PidExecutor" in globals()
+    assert "UnixSocketExecutor" in globals()
     assert "ExecutorError" in globals()
     assert "TimeoutExpired" in globals()
     assert "AlreadyRunning" in globals()
