@@ -78,3 +78,13 @@ def test_fail_if_other_executor_running() -> None:
 
         with pytest.raises(AlreadyRunning):
             executor2.start()
+
+
+def test_already_running_message_without_port() -> None:
+    """Test AlreadyRunning message for an executor that has no port."""
+    executor = PidExecutor("true", FILENAME)
+
+    message = str(AlreadyRunning(executor))
+
+    assert "seems to be already running" in message
+    assert "port" not in message

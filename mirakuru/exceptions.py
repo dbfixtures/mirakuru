@@ -54,7 +54,7 @@ class AlreadyRunning(ExecutorError):
         :returns: string representation
         :rtype: str
         """
-        port = getattr(self.executor, "port")
+        port = getattr(self.executor, "port", None)
         return (
             f"Executor {self.executor} seems to be already running. "
             f"It looks like the previous executor process hasn't been "
