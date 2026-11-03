@@ -1,1 +1,0 @@
-Export ``UnixSocketExecutor`` from the package root, like the other executors.

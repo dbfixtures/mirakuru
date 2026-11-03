@@ -3,6 +3,28 @@ CHANGELOG
 
 .. towncrier release notes start
 
+mirakuru 3.1.0 (2026-11-03)
+===========================
+
+Features
+--------
+
+- Add support for Python 3.15, drop support for Python 3.10 (`#1164 <https://github.com/dbfixtures/mirakuru/issues/1164>`_)
+
+
+Bugfixes
+--------
+
+- Export ``UnixSocketExecutor`` from the package root, like the other executors. (`#1171 <https://github.com/dbfixtures/mirakuru/issues/1171>`_)
+- Fix ``AlreadyRunning`` string representation raising ``AttributeError`` for executors without a port, such as ``PidExecutor``. (`#1198 <https://github.com/dbfixtures/mirakuru/issues/1198>`_)
+
+
+Miscellaneous
+-------------
+
+- `#1167 <https://github.com/dbfixtures/mirakuru/issues/1167>`_, `#1190 <https://github.com/dbfixtures/mirakuru/issues/1190>`_
+
+
 mirakuru 3.0.4 (2026-10-03)
 ===========================
 
