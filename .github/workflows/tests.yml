@@ -24,7 +24,7 @@ jobs:
       python-versions: '["3.12", "3.13", "3.14", "3.15", "pypy-3.11"]'
       dependency-manager: 'uv'
       pytest_opts: '-n auto --dist loadgroup --basetemp=$RUNNER_TEMP/pt'
-      os: macos-14 # macos-latest is on macos-15 which misbehaves'
+      os: macos-latest
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
   oldest:
