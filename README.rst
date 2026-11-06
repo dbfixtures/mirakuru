@@ -155,6 +155,25 @@ reported as started and control returns to your code.
 
     process.stop()
 
+UnixSocketExecutor
+++++++++++++++++++
+
+UnixSocketExecutor should be used to start processes that communicate over Unix sockets.
+This executor tries to connect to the socket at the path given in ``socket_name`` to check
+if the process started accepting stream connections. Once it successfully connects, the
+process is reported as started and control returns to your code.
+
+.. code-block:: python
+
+    from mirakuru import UnixSocketExecutor
+
+    process = UnixSocketExecutor('my_special_process', socket_name='/tmp/process.sock')
+    process.start()
+
+    # Here you can do your stuff, e.g. communicate with the started process
+
+    process.stop()
+
 HTTPExecutor
 ++++++++++++
 
