@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from mirakuru import AlreadyRunning, HTTPExecutor, TCPExecutor
+from tests import skip_on_windows
 from tests.executors.http.base import (
     HOST,
     HTTP_NORMAL_CMD,
@@ -14,7 +15,7 @@ from tests.executors.http.base import (
     connect_to_server,
 )
 
-pytestmark = pytest.mark.xdist_group(name=XDIST_GROUP)
+pytestmark = [pytest.mark.xdist_group(name=XDIST_GROUP), skip_on_windows(issue=1216)]
 
 
 def test_executor_starts_and_waits() -> None:

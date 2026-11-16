@@ -6,6 +6,9 @@ from collections.abc import Iterator
 import pytest
 
 from mirakuru import AlreadyRunning, PidExecutor, TimeoutExpired
+from tests import skip_on_windows
+
+pytestmark = skip_on_windows(issue=1217)
 
 FILENAME = f"pid-test-tmp{os.getpid()}"
 SLEEP = f'bash -c "sleep 1 && touch {FILENAME} && sleep 1"'

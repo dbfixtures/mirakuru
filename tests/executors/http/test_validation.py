@@ -3,9 +3,10 @@
 import pytest
 
 from mirakuru import HTTPExecutor
+from tests import skip_on_windows
 from tests.executors.http.base import HOST, HTTP_NORMAL_CMD, PORT, XDIST_GROUP
 
-pytestmark = pytest.mark.xdist_group(name=XDIST_GROUP)
+pytestmark = [pytest.mark.xdist_group(name=XDIST_GROUP), skip_on_windows(issue=1216)]
 
 
 def test_negative_request_timeout() -> None:

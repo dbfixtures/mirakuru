@@ -12,16 +12,21 @@ from unittest.mock import patch
 import pytest
 
 from mirakuru import HTTPExecutor, SimpleExecutor
-from mirakuru.compat import SIGKILL
 from mirakuru.exceptions import ProcessFinishedWithError
-from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, ps_aux
-
-SLEEP_300 = "sleep 300"
+from tests import (
+    SAMPLE_DAEMON_PATH,
+    SLEEP_300,
+    TEST_SERVER_PATH,
+    needs_posix_daemon,
+    running_command_lines,
+    signalled_exit_code,
+    skip_on_windows,
+)
 
 
 def test_custom_signal_kill() -> None:
-    """Start process and shuts it down using signal SIGQUIT."""
-    executor = SimpleExecutor(SLEEP_300, kill_signal=signal.SIGQUIT)
+    """Start process and shuts it down using signal SIGABRT."""
+    executor = SimpleExecutor(SLEEP_300, kill_signal=signal.SIGABRT)
     executor.start()
     assert executor.running() is True
     executor.kill()
@@ -29,20 +34,20 @@ def test_custom_signal_kill() -> None:
 
 
 def test_kill_custom_signal_kill() -> None:
-    """Start process and shuts it down using signal SIGQUIT passed to kill."""
+    """Start process and shuts it down using signal SIGABRT passed to kill."""
     executor = SimpleExecutor(SLEEP_300)
     executor.start()
     assert executor.running() is True
-    executor.kill(sig=signal.SIGQUIT)
+    executor.kill(sig=signal.SIGABRT)
     assert executor.running() is False
 
 
 def test_already_closed() -> None:
     """Check that the executor cleans after itself after it exited earlier."""
     with pytest.raises(ProcessFinishedWithError) as excinfo:
-        with SimpleExecutor("python") as executor:
+        with SimpleExecutor([sys.executable]) as executor:
             assert executor.running()
-            os.killpg(executor.process.pid, SIGKILL)
+            os.kill(executor.process.pid, signal.SIGABRT)
 
             def process_stopped() -> bool:
                 """Return True only only when self.process is not running."""
@@ -50,10 +55,11 @@ def test_already_closed() -> None:
 
             executor.wait_for(process_stopped)
             assert executor.process
-    assert excinfo.value.exit_code == -9
+    assert excinfo.value.exit_code == signalled_exit_code(signal.SIGABRT)
     assert not executor.process
 
 
+@needs_posix_daemon
 @pytest.mark.xdist_group(name="sample-deamon")
 def test_daemons_killing() -> None:
     """Test if all subprocesses of SimpleExecutor can be killed.
@@ -69,11 +75,12 @@ def test_daemons_killing() -> None:
         "Executor should not have subprocess running as it started a daemon."
     )
 
-    assert SAMPLE_DAEMON_PATH in ps_aux()
+    assert SAMPLE_DAEMON_PATH in running_command_lines()
     executor.kill()
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in running_command_lines()
 
 
+@skip_on_windows(issue=1216)
 def test_stopping_brutally() -> None:
     """Test if SimpleExecutor is stopping insubordinate process.
 

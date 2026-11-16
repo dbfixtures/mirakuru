@@ -56,10 +56,11 @@ def processes_with_env_psutil(env_name: str, env_value: str) -> set[int]:
             # can't do much if psutil is not able to get this process details
             continue
         except (psutil.AccessDenied, PermissionError, SystemError):
-            # macOS can deny reading process envs via sysctl(KERN_PROCARGS2)
-            if platform.system() == "Darwin":
+            # macOS can deny reading process envs via sysctl(KERN_PROCARGS2),
+            # and Windows the envs of processes run by other users.
+            if platform.system() in ("Darwin", "Windows"):
                 LOG.debug(
-                    "Skipping process %d due to macOS environ access restriction",
+                    "Skipping process %d due to environ access restriction",
                     proc.pid,
                     exc_info=True,
                 )

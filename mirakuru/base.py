@@ -26,6 +26,7 @@ import platform
 import shlex
 import signal
 import subprocess
+import sys
 import time
 import uuid
 from collections.abc import Callable, Iterator
@@ -37,6 +38,11 @@ from typing import (
     Self,
     TypeVar,
 )
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from mirakuru.base_env import processes_with_env
 from mirakuru.compat import SIGKILL
@@ -57,6 +63,10 @@ Name of the environment variable used by mirakuru to mark its subprocesses.
 IGNORED_ERROR_CODES = [errno.ESRCH]
 if platform.system() == "Darwin":
     IGNORED_ERROR_CODES = [errno.ESRCH, errno.EPERM]
+elif sys.platform == "win32":
+    # Terminating a process that has already exited is denied, and opening
+    # one that no longer exists is an invalid parameter.
+    IGNORED_ERROR_CODES = [errno.ESRCH, errno.EACCES, errno.EINVAL]
 
 # Type variables used for self in functions returning self, so it's correctly
 # typed in derived classes.
@@ -84,6 +94,33 @@ def cleanup_subprocesses() -> None:
                 print("Can not kill the", pid, "leaked process", err)
 
 
+def signal_process_tree(pid: int, sig: int) -> None:
+    """Send a signal to a process and all its descendants.
+
+    Processes that exit before they get the signal are skipped.
+
+    :param pid: process identifier (PID) of the process at the root of the tree
+    :param sig: signal to send
+    """
+    if psutil is None:  # pragma: no cover
+        # Without psutil the process group stands in for the tree. The process
+        # was started in a session of its own, so its group ID is its PID.
+        pids = [-pid]
+    else:
+        try:
+            descendants = psutil.Process(pid).children(recursive=True)
+        except psutil.NoSuchProcess:
+            descendants = []
+        pids = [pid, *(descendant.pid for descendant in descendants)]
+
+    for target in pids:
+        try:
+            os.kill(target, sig)
+        except OSError as err:
+            if err.errno not in IGNORED_ERROR_CODES:
+                raise
+
+
 class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
     """Simple subprocess executor with start/stop/kill functionality."""
 
@@ -108,7 +145,6 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         :param command: command to be run by the subprocess
         :param cwd: current working directory to be set for executor
         :param shell: same as the `subprocess.Popen` shell definition.
-            On Windows always set to True.
         :param timeout: number of seconds to wait for the process to start
             or stop.
         :param sleep: how often to check for start/stop condition
@@ -117,8 +153,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         :param kill_signal: signal used to kill a process run by the executor.
             default is `signal.SIGKILL` (`signal.SIGTERM` on Windows)
         :param expected_returncode: expected exit code.
-            default is None, which means, Executor will determine a POSIX
-            compatible return code based on signal sent.
+            default is None, which means, Executor will determine the return
+            code based on signal sent: ``-signal`` on POSIX and ``signal``
+            on Windows.
         :param envvars: Additional environment variables
         :param stdin: file descriptor for stdin
         :param stdout: file descriptor for stdout
@@ -146,11 +183,12 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         else:
             self.command = command
             self.command_parts = shlex.split(command)
+        # Windows splits a command line by its own rules, which shlex does not
+        # follow, so a command given as a string reaches it unsplit.
+        self._command_is_string = isinstance(command, str)
 
         self._cwd = cwd
-        self._shell = True
-        if platform.system() != "Windows":
-            self._shell = shell
+        self._shell = shell
 
         self._timeout = timeout
         self._sleep = sleep
@@ -241,7 +279,11 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         kwargs["shell"] = self._shell
         kwargs["env"] = self.envvars
         kwargs["cwd"] = self._cwd
-        if platform.system() != "Windows":
+        if sys.platform == "win32":
+            kwargs["creationflags"] = (
+                kwargs.get("creationflags", 0) | subprocess.CREATE_NEW_PROCESS_GROUP
+            )
+        else:
             kwargs["preexec_fn"] = os.setsid
 
         return kwargs
@@ -256,7 +298,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         """
         if self.process is None:
             command: str | list[str] | tuple[str, ...] = self.command
-            if not self._shell:
+            if not self._shell and not (sys.platform == "win32" and self._command_is_string):
                 command = self.command_parts
             LOG.debug("Starting process: %s", command)
             self.process = subprocess.Popen(command, **self._popen_kwargs)
@@ -344,13 +386,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if stop_signal is None:
             stop_signal = self._stop_signal
 
-        try:
-            os.killpg(self.process.pid, stop_signal)
-        except OSError as err:
-            if err.errno in IGNORED_ERROR_CODES:
-                pass
-            else:
-                raise
+        signal_process_tree(self.process.pid, stop_signal)
 
         def process_stopped() -> bool:
             """Return True only only when self.process is not running."""
@@ -374,10 +410,10 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if expected_returncode is None:
             expected_returncode = self._expected_returncode
         if expected_returncode is None:
-            # Assume a POSIX approach where sending a SIGNAL means
-            # that the process should exist with -SIGNAL exit code.
+            # On POSIX a process ended by a signal exits with -SIGNAL:
             # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
-            expected_returncode = -stop_signal
+            # On Windows, `TerminateProcess` exits with the number it was given.
+            expected_returncode = stop_signal if sys.platform == "win32" else -stop_signal
 
         if exit_code and exit_code != expected_returncode:
             raise ProcessFinishedWithError(self, exit_code)
@@ -411,7 +447,7 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if sig is None:
             sig = self._kill_signal
         if self.process and self.running():
-            os.killpg(self.process.pid, sig)
+            signal_process_tree(self.process.pid, sig)
             if wait:
                 self.process.wait()
 

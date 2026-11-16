@@ -10,10 +10,10 @@ from unittest.mock import PropertyMock, patch
 import pytest
 
 from mirakuru import HTTPExecutor, TimeoutExpired
-from tests import TEST_SERVER_PATH
+from tests import TEST_SERVER_PATH, skip_on_windows
 from tests.executors.http.base import HOST, HTTP_NORMAL_CMD, PORT, XDIST_GROUP
 
-pytestmark = pytest.mark.xdist_group(name=XDIST_GROUP)
+pytestmark = [pytest.mark.xdist_group(name=XDIST_GROUP), skip_on_windows(issue=1216)]
 
 HTTP_HANGING_CMD = f"{sys.executable} {TEST_SERVER_PATH} {HOST}:{PORT} False Hang"
 

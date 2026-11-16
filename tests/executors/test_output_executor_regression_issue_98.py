@@ -16,6 +16,9 @@ See: https://github.com/dbfixtures/mirakuru/issues/98
 import subprocess
 
 from mirakuru import OutputExecutor, TimeoutExpired
+from tests import skip_on_windows
+
+pytestmark = skip_on_windows(issue=1218)
 
 
 def test_output_executor_handles_large_output_before_banner() -> None:
