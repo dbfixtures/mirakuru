@@ -52,6 +52,28 @@ def test_command(command: str | list[str], expected_command: str) -> None:
     assert list(executor.command_parts) == SLEEP_300
 
 
+@pytest.mark.skipif(not WINDOWS, reason="Checks the Windows rules for splitting a command line.")
+@pytest.mark.parametrize(
+    "command, expected_parts",
+    (
+        ('python -c "pass" C:\\temp\\', ["python", "-c", "pass", "C:\\temp\\"]),
+        (
+            '"C:\\Program Files\\app.exe" "two words"',
+            ["C:\\Program Files\\app.exe", "two words"],
+        ),
+        ('app a\\\\\\"b', ["app", 'a\\"b']),
+        ("", []),
+    ),
+)
+def test_command_parts__split_by_windows_rules(command: str, expected_parts: list[str]) -> None:
+    """Check that a command given as a string is split the way Windows programs read it."""
+    # When
+    executor = SimpleExecutor(command)
+
+    # Then
+    assert executor.command_parts == expected_parts
+
+
 def test_custom_signal_stop() -> None:
     """Start process and shuts it down using signal SIGABRT."""
     executor = SimpleExecutor(SLEEP_300, stop_signal=signal.SIGABRT)

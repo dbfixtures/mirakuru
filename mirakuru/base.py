@@ -45,7 +45,7 @@ except ImportError:
     psutil = None
 
 from mirakuru.base_env import processes_with_env
-from mirakuru.compat import SIGKILL
+from mirakuru.compat import SIGKILL, split_command_line
 from mirakuru.exceptions import (
     AlreadyRunning,
     ProcessExitedWithError,
@@ -205,9 +205,9 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             self.command_parts = command
         else:
             self.command = command
-            self.command_parts = shlex.split(command)
-        # Windows splits a command line by its own rules, which shlex does not
-        # follow, so a command given as a string reaches it unsplit.
+            self.command_parts = split_command_line(command)
+        # On Windows a command given as a string reaches the program unsplit,
+        # so the program reads it exactly as written.
         self._command_is_string = isinstance(command, str)
 
         self._cwd = cwd
