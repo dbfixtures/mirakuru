@@ -97,28 +97,51 @@ def cleanup_subprocesses() -> None:
 def signal_process_tree(pid: int, sig: int) -> None:
     """Send a signal to a process and all its descendants.
 
+    On POSIX the signal goes to the process group as well, which also reaches
+    members whose parent has exited and so are no longer descendants.
     Processes that exit before they get the signal are skipped.
 
     :param pid: process identifier (PID) of the process at the root of the tree
     :param sig: signal to send
     """
-    if psutil is None:  # pragma: no cover
-        # Without psutil the process group stands in for the tree. The process
-        # was started in a session of its own, so its group ID is its PID.
-        pids = [-pid]
-    else:
+    descendants = []
+    if psutil is not None:
         try:
             descendants = psutil.Process(pid).children(recursive=True)
         except psutil.NoSuchProcess:
-            descendants = []
-        pids = [pid, *(descendant.pid for descendant in descendants)]
+            pass
 
-    for target in pids:
-        try:
-            os.kill(target, sig)
-        except OSError as err:
-            if err.errno not in IGNORED_ERROR_CODES:
-                raise
+    if sys.platform == "win32":
+        _send_signal(pid, sig)
+    else:
+        # The process was started in a session of its own, so its process
+        # group ID is its PID. Group members get the signal once, through
+        # the group.
+        outside_group = []
+        for descendant in descendants:
+            try:
+                if os.getpgid(descendant.pid) != pid:
+                    outside_group.append(descendant)
+            except ProcessLookupError:
+                pass
+            except PermissionError:
+                outside_group.append(descendant)
+        descendants = outside_group
+        _send_signal(-pid, sig)
+
+    for descendant in descendants:
+        # A descendant that has exited since listing may have its PID reused.
+        if descendant.is_running():
+            _send_signal(descendant.pid, sig)
+
+
+def _send_signal(target: int, sig: int) -> None:
+    """Send a signal with `os.kill`, ignoring a process that has already exited."""
+    try:
+        os.kill(target, sig)
+    except OSError as err:
+        if err.errno not in IGNORED_ERROR_CODES:
+            raise
 
 
 class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
