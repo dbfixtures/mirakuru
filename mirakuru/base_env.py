@@ -19,9 +19,9 @@
 
 import errno
 import logging
-import platform
 import re
 import subprocess
+import sys
 
 try:
     import psutil
@@ -58,7 +58,7 @@ def processes_with_env_psutil(env_name: str, env_value: str) -> set[int]:
         except (psutil.AccessDenied, PermissionError, SystemError):
             # macOS can deny reading process envs via sysctl(KERN_PROCARGS2),
             # and Windows the envs of processes run by other users.
-            if platform.system() in ("Darwin", "Windows"):
+            if sys.platform in ("darwin", "win32"):
                 LOG.debug(
                     "Skipping process %d due to environ access restriction",
                     proc.pid,

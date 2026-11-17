@@ -22,7 +22,6 @@ import errno
 import logging
 import math
 import os
-import platform
 import shlex
 import signal
 import subprocess
@@ -61,7 +60,7 @@ Name of the environment variable used by mirakuru to mark its subprocesses.
 """
 
 IGNORED_ERROR_CODES = [errno.ESRCH]
-if platform.system() == "Darwin":
+if sys.platform == "darwin":
     IGNORED_ERROR_CODES = [errno.ESRCH, errno.EPERM]
 elif sys.platform == "win32":
     # Terminating a process that has already exited is denied, and opening
