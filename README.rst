@@ -76,24 +76,32 @@ The library provides seven executors to fit different cases:
 
 .. list-table::
    :header-rows: 1
-   :widths: 25 75
+   :widths: 25 60 15
 
    * - Executor
      - Use When
+     - Windows
    * - **SimpleExecutor**
      - You just need to start/stop a process without waiting for readiness. Base class for all other executors.
+     - Yes
    * - **Executor**
      - Base class for executors that verify process startup.
+     - Yes
    * - **OutputExecutor**
      - Your process prints a specific message when ready (e.g., "Server started on port 8080")
+     - Planned
    * - **TCPExecutor**
      - Your process opens a TCP port when ready (e.g., Redis, PostgreSQL, Memcached)
+     - Planned
    * - **UnixSocketExecutor**
      - Your process opens a Unix socket when ready (e.g., Docker daemon, some databases)
+     - No
    * - **HTTPExecutor**
      - Your process serves HTTP requests when ready (e.g., web servers, REST APIs)
+     - Planned
    * - **PidExecutor**
      - Your process creates a .pid file when ready (e.g., traditional Unix daemons)
+     - Planned
 
 SimpleExecutor
 ++++++++++++++
@@ -340,15 +348,8 @@ Projects `PyPI page <https://pypi.python.org/pypi/mirakuru>`_.
 Windows support
 ---------------
 
-Frankly, there's none, Python's support differs a bit in required places
-and the team has no experience in developing for Windows.
-However we'd welcome contributions that will allow the windows support.
+The Windows column in the executors table under `Usage`_ shows which executors run on Windows.
 
-See:
-
-* `#392 <https://github.com/dbfixtures/mirakuru/issues/392>`_
-* `#336 <https://github.com/dbfixtures/mirakuru/issues/336>`_
-
-Also, with the introduction of `WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_
-the need for raw Windows support might not be that urgent... If you've got any thoughts or are willing to contribute,
-please start with the issues listed above.
+On Windows, stopping or killing a process ends it at once with ``TerminateProcess``, so it
+can't catch the signal to shut down gracefully. Its exit code is then the signal's number,
+not the negative number POSIX gives, and ``stop()`` expects that.
