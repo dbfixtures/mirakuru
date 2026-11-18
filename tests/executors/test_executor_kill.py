@@ -6,22 +6,30 @@ import os
 import signal
 import sys
 import time
+import uuid
 from typing import NoReturn
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import psutil
 import pytest
 
 from mirakuru import HTTPExecutor, SimpleExecutor
-from mirakuru.compat import SIGKILL
+from mirakuru.base import ENV_UUID, signal_process_tree
 from mirakuru.exceptions import ProcessFinishedWithError
-from tests import SAMPLE_DAEMON_PATH, TEST_SERVER_PATH, ps_aux
-
-SLEEP_300 = "sleep 300"
+from tests import (
+    SAMPLE_DAEMON_PATH,
+    SLEEP_300,
+    TEST_SERVER_PATH,
+    needs_posix_daemon,
+    running_command_lines,
+    signalled_exit_code,
+    skip_on_windows,
+)
 
 
 def test_custom_signal_kill() -> None:
-    """Start process and shuts it down using signal SIGQUIT."""
-    executor = SimpleExecutor(SLEEP_300, kill_signal=signal.SIGQUIT)
+    """Start process and shuts it down using signal SIGABRT."""
+    executor = SimpleExecutor(SLEEP_300, kill_signal=signal.SIGABRT)
     executor.start()
     assert executor.running() is True
     executor.kill()
@@ -29,20 +37,20 @@ def test_custom_signal_kill() -> None:
 
 
 def test_kill_custom_signal_kill() -> None:
-    """Start process and shuts it down using signal SIGQUIT passed to kill."""
+    """Start process and shuts it down using signal SIGABRT passed to kill."""
     executor = SimpleExecutor(SLEEP_300)
     executor.start()
     assert executor.running() is True
-    executor.kill(sig=signal.SIGQUIT)
+    executor.kill(sig=signal.SIGABRT)
     assert executor.running() is False
 
 
 def test_already_closed() -> None:
     """Check that the executor cleans after itself after it exited earlier."""
     with pytest.raises(ProcessFinishedWithError) as excinfo:
-        with SimpleExecutor("python") as executor:
+        with SimpleExecutor([sys.executable]) as executor:
             assert executor.running()
-            os.killpg(executor.process.pid, SIGKILL)
+            os.kill(executor.process.pid, signal.SIGABRT)
 
             def process_stopped() -> bool:
                 """Return True only only when self.process is not running."""
@@ -50,10 +58,11 @@ def test_already_closed() -> None:
 
             executor.wait_for(process_stopped)
             assert executor.process
-    assert excinfo.value.exit_code == -9
+    assert excinfo.value.exit_code == signalled_exit_code(signal.SIGABRT)
     assert not executor.process
 
 
+@needs_posix_daemon
 @pytest.mark.xdist_group(name="sample-deamon")
 def test_daemons_killing() -> None:
     """Test if all subprocesses of SimpleExecutor can be killed.
@@ -69,11 +78,12 @@ def test_daemons_killing() -> None:
         "Executor should not have subprocess running as it started a daemon."
     )
 
-    assert SAMPLE_DAEMON_PATH in ps_aux()
+    assert SAMPLE_DAEMON_PATH in running_command_lines()
     executor.kill()
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in running_command_lines()
 
 
+@skip_on_windows(issue=1216)
 def test_stopping_brutally() -> None:
     """Test if SimpleExecutor is stopping insubordinate process.
 
@@ -120,3 +130,62 @@ def test_stopping_children_of_stopped_process() -> None:
     ):
         executor = SimpleExecutor(SLEEP_300)
         executor._kill_all_kids(executor._stop_signal)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no process groups to signal.")
+def test_stop__signals_process_group_member_outside_tree() -> None:
+    """Check that stop reaches a process group member whose parent has exited.
+
+    Such a worker is reparented away from the executor's process, so it is
+    not a descendant anymore, and without the environment marker the leftover
+    search cannot find it either.
+    """
+    # Given
+    mark = uuid.uuid4().hex
+    worker_code = f"import time; time.sleep(300)  # {mark}"
+    intermediary_code = (
+        f"import subprocess, sys; subprocess.Popen([sys.executable, '-c', {worker_code!r}])"
+    )
+    root_code = (
+        "import os, subprocess, sys, time; "
+        f"env = {{k: v for k, v in os.environ.items() if k != {ENV_UUID!r}}}; "
+        f"subprocess.Popen([sys.executable, '-c', {intermediary_code!r}], env=env); "
+        "time.sleep(300)"
+    )
+    executor = SimpleExecutor([sys.executable, "-c", root_code]).start()
+    deadline = time.time() + 10
+    while mark not in running_command_lines():
+        assert time.time() < deadline, "The worker process did not start."
+        time.sleep(0.1)
+
+    # When
+    executor.stop()
+
+    # Then
+    deadline = time.time() + 10
+    while mark in running_command_lines():
+        assert time.time() < deadline, "The worker process outlived the executor."
+        time.sleep(0.1)
+
+
+def test_signal_process_tree__skips_exited_descendant() -> None:
+    """Check that a descendant which exited after listing is not signalled.
+
+    Its process ID may already belong to an unrelated process.
+    """
+    # Given
+    descendant_mock = MagicMock(spec=psutil.Process, pid=999999)
+    descendant_mock.is_running.return_value = False
+    root_mock = MagicMock(spec=psutil.Process)
+    root_mock.children.return_value = [descendant_mock]
+
+    with (
+        patch("mirakuru.base.psutil.Process", return_value=root_mock),
+        patch("mirakuru.base.os.kill") as kill_mock,
+    ):
+        # When
+        signal_process_tree(12345, signal.SIGTERM)
+
+    # Then
+    signalled_pids = [call.args[0] for call in kill_mock.call_args_list]
+    assert descendant_mock.pid not in signalled_pids

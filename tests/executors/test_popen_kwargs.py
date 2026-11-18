@@ -1,6 +1,8 @@
 """Test passing additional Popen kwargs to subprocess.Popen."""
 
 import os
+import subprocess
+import sys
 from unittest import mock
 
 import pytest
@@ -21,7 +23,11 @@ def test_additional_popen_kwargs_are_passed_through(command: str | list[str]) ->
     """
     popen_kwargs = {"bufsize": 1, "close_fds": True}
 
-    with mock.patch("subprocess.Popen") as popen_mock:
+    with (
+        mock.patch("subprocess.Popen") as popen_mock,
+        # The mocked process ID may belong to a real process; leave it alone.
+        mock.patch("mirakuru.base.signal_process_tree"),
+    ):
         # Make the mocked Popen act like a context manager-compatible Popen
         proc = mock.MagicMock()
         # Make poll() return None initially (running), but 0 after the first call
@@ -46,7 +52,10 @@ def test_additional_popen_kwargs_are_passed_through(command: str | list[str]) ->
             assert "env" in kwargs and isinstance(kwargs["env"], dict)
             assert kwargs.get("cwd") is None
             assert kwargs.get("universal_newlines") is True
-            assert callable(kwargs.get("preexec_fn"))
+            if sys.platform == "win32":
+                assert kwargs.get("creationflags") & subprocess.CREATE_NEW_PROCESS_GROUP
+            else:
+                assert callable(kwargs.get("preexec_fn"))
 
 
 def test_additional_popen_kwargs_do_not_override_standard_streams() -> None:
@@ -59,7 +68,11 @@ def test_additional_popen_kwargs_do_not_override_standard_streams() -> None:
     Then:
         Standard streams are not overridden.
     """
-    with mock.patch("subprocess.Popen") as popen_mock:
+    with (
+        mock.patch("subprocess.Popen") as popen_mock,
+        # The mocked process ID may belong to a real process; leave it alone.
+        mock.patch("mirakuru.base.signal_process_tree"),
+    ):
         proc = mock.MagicMock()
         # Make poll() return None initially (running), but 0 after the first call
         # to simulate stopping

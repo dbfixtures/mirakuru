@@ -10,7 +10,9 @@ import pytest
 
 from mirakuru import TimeoutExpired
 from mirakuru.unixsocket import UnixSocketExecutor
-from tests import TEST_SOCKET_SERVER_PATH
+from tests import TEST_SOCKET_SERVER_PATH, skip_on_windows
+
+pytestmark = skip_on_windows(issue=1219)
 
 
 def test_start_and_wait(

@@ -8,7 +8,9 @@ import pytest
 from _pytest.logging import LogCaptureFixture
 
 from mirakuru import AlreadyRunning, TCPExecutor, TimeoutExpired
-from tests import HTTP_SERVER_CMD
+from tests import HTTP_SERVER_CMD, skip_on_windows
+
+pytestmark = skip_on_windows(issue=1215)
 
 
 # Allocate a random free port to avoid hardcoding and risking hitting an

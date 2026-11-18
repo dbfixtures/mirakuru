@@ -8,6 +8,9 @@ import pytest
 
 from mirakuru import OutputExecutor
 from mirakuru.exceptions import TimeoutExpired
+from tests import skip_on_windows
+
+pytestmark = skip_on_windows(issue=1218)
 
 
 def test_executor_waits_for_process_output() -> None:

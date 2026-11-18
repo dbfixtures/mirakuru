@@ -1,0 +1,1 @@
+On Windows, run the command through a shell only when ``shell=True`` is passed, as on POSIX. A command given as a string is passed to Windows unsplit, and ``command_parts`` holds it split by the Windows rules instead of the POSIX shell ones.

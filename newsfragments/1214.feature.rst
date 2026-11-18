@@ -1,0 +1,1 @@
+Run ``SimpleExecutor`` and ``Executor`` on Windows. ``stop()`` there expects the process to exit with the stop signal's number, as ``TerminateProcess`` sets it, instead of its negative.

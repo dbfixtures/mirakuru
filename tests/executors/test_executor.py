@@ -5,6 +5,7 @@ import gc
 import math
 import shlex
 import signal
+import sys
 import uuid
 from subprocess import check_output
 from unittest import mock
@@ -14,13 +15,19 @@ import pytest
 from mirakuru import Executor
 from mirakuru.base import SimpleExecutor
 from mirakuru.exceptions import ProcessExitedWithError, TimeoutExpired
-from tests import SAMPLE_DAEMON_PATH, ps_aux
+from tests import (
+    SAMPLE_DAEMON_PATH,
+    SLEEP_300,
+    SLEEP_300_LINE,
+    WINDOWS,
+    needs_posix_daemon,
+    running_command_lines,
+    signalled_exit_code,
+)
 from tests.retry import retry
 
-SLEEP_300 = "sleep 300"
 
-
-@pytest.mark.parametrize("command", (SLEEP_300, SLEEP_300.split()))
+@pytest.mark.parametrize("command", (SLEEP_300_LINE, SLEEP_300))
 def test_running_process(command: str | list[str]) -> None:
     """Start process and shuts it down."""
     executor = SimpleExecutor(command)
@@ -31,20 +38,45 @@ def test_running_process(command: str | list[str]) -> None:
 
     # check proper __str__ and __repr__ rendering:
     assert "SimpleExecutor" in repr(executor)
-    assert SLEEP_300 in str(executor)
+    assert executor.command in str(executor)
 
 
-@pytest.mark.parametrize("command", (SLEEP_300, SLEEP_300.split()))
-def test_command(command: str | list[str]) -> None:
+@pytest.mark.parametrize(
+    "command, expected_command",
+    ((SLEEP_300_LINE, SLEEP_300_LINE), (SLEEP_300, shlex.join(SLEEP_300))),
+)
+def test_command(command: str | list[str], expected_command: str) -> None:
     """Check that the command and command parts are equivalent."""
     executor = SimpleExecutor(command)
-    assert executor.command == SLEEP_300
-    assert executor.command_parts == SLEEP_300.split()
+    assert executor.command == expected_command
+    assert list(executor.command_parts) == SLEEP_300
+
+
+@pytest.mark.skipif(not WINDOWS, reason="Checks the Windows rules for splitting a command line.")
+@pytest.mark.parametrize(
+    "command, expected_parts",
+    (
+        ('python -c "pass" C:\\temp\\', ["python", "-c", "pass", "C:\\temp\\"]),
+        (
+            '"C:\\Program Files\\app.exe" "two words"',
+            ["C:\\Program Files\\app.exe", "two words"],
+        ),
+        ('app a\\\\\\"b', ["app", 'a\\"b']),
+        ("", []),
+    ),
+)
+def test_command_parts__split_by_windows_rules(command: str, expected_parts: list[str]) -> None:
+    """Check that a command given as a string is split the way Windows programs read it."""
+    # When
+    executor = SimpleExecutor(command)
+
+    # Then
+    assert executor.command_parts == expected_parts
 
 
 def test_custom_signal_stop() -> None:
-    """Start process and shuts it down using signal SIGQUIT."""
-    executor = SimpleExecutor(SLEEP_300, stop_signal=signal.SIGQUIT)
+    """Start process and shuts it down using signal SIGABRT."""
+    executor = SimpleExecutor(SLEEP_300, stop_signal=signal.SIGABRT)
     executor.start()
     assert executor.running() is True
     executor.stop()
@@ -52,27 +84,32 @@ def test_custom_signal_stop() -> None:
 
 
 def test_stop_custom_signal_stop() -> None:
-    """Start process and shuts it down using signal SIGQUIT passed to stop."""
+    """Start process and shuts it down using signal SIGABRT passed to stop."""
     executor = SimpleExecutor(SLEEP_300)
     executor.start()
     assert executor.running() is True
-    executor.stop(stop_signal=signal.SIGQUIT)
+    executor.stop(stop_signal=signal.SIGABRT)
     assert executor.running() is False
 
 
 def test_stop_custom_exit_signal_stop() -> None:
     """Start process and expect it to finish with custom signal."""
-    executor = SimpleExecutor("false", shell=True)
+    executor = SimpleExecutor(f'"{sys.executable}" -c "raise SystemExit(1)"', shell=True)
     executor.start()
-    # false exits instant, so there should not be a process to stop
-    retry(lambda: executor.stop(stop_signal=signal.SIGQUIT, expected_returncode=-3))
+    # the command exits instantly, so there should not be a process to stop
+    expected_returncode = signalled_exit_code(signal.SIGABRT)
+    retry(
+        lambda: executor.stop(stop_signal=signal.SIGABRT, expected_returncode=expected_returncode)
+    )
     assert executor.running() is False
 
 
 def test_stop_custom_exit_signal_context() -> None:
     """Start a process and expect a custom exit signal in the context manager."""
-    with SimpleExecutor(SLEEP_300, expected_returncode=-3) as executor:
-        executor.stop(stop_signal=signal.SIGQUIT)
+    with SimpleExecutor(
+        SLEEP_300, expected_returncode=signalled_exit_code(signal.SIGABRT)
+    ) as executor:
+        executor.stop(stop_signal=signal.SIGABRT)
         assert executor.running() is False
 
 
@@ -103,10 +140,11 @@ def test_context_stopped() -> None:
     assert executor.running() is False
 
 
-ECHO_FOOBAR = 'echo "foobar"'
+ECHO_FOOBAR = [sys.executable, "-c", "print('foobar')"]
+ECHO_FOOBAR_LINE = f'"{sys.executable}" -c "print(\'foobar\')"'
 
 
-@pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
+@pytest.mark.parametrize("command", (ECHO_FOOBAR_LINE, ECHO_FOOBAR))
 def test_process_output(command: str | list[str]) -> None:
     """Start a process, check output and shut it down."""
     executor = SimpleExecutor(command)
@@ -116,7 +154,19 @@ def test_process_output(command: str | list[str]) -> None:
     executor.stop()
 
 
-@pytest.mark.parametrize("command", (ECHO_FOOBAR, shlex.split(ECHO_FOOBAR)))
+@pytest.mark.parametrize(
+    "command",
+    (
+        ECHO_FOOBAR_LINE,
+        pytest.param(
+            ECHO_FOOBAR,
+            marks=pytest.mark.skipif(
+                WINDOWS,
+                reason="The command is joined with POSIX quoting, which cmd.exe does not read.",
+            ),
+        ),
+    ),
+)
 def test_process_output_shell(command: str | list[str]) -> None:
     """Start process, check output and shut it down with shell set to True."""
     executor = SimpleExecutor(command, shell=True)
@@ -156,24 +206,19 @@ def test_forgotten_stop() -> None:
     by default on instance cleanup.
     """
     mark = uuid.uuid1().hex
-    # We cannot simply do `sleep 300 #<our-uuid>` in a shell because in that
-    # case bash (default shell on some systems) does `execve` without cloning
-    # itself - that means there will be no process with commandline like:
-    # '/bin/sh -c sleep 300 && true #<our-uuid>' - instead that process would
-    # get substituted with 'sleep 300' and the marked commandline would be
-    # overwritten.
-    # Injecting some flow control (`&&`) forces bash to fork properly.
-    marked_command = f"sleep 300 && true #{mark}"
-    executor = SimpleExecutor(marked_command, shell=True)
+    marked_command = [sys.executable, "-c", f"import time; time.sleep(300)  # {mark}"]
+    executor = SimpleExecutor(marked_command)
     executor.start()
     assert executor.running() is True
-    ps_output = ps_aux()
-    assert mark in ps_output, (
-        f"The test command {marked_command} should be running in \n\n {ps_output}."
+    command_lines = running_command_lines()
+    assert mark in command_lines, (
+        f"The test command {marked_command} should be running in \n\n {command_lines}."
     )
     del executor
     gc.collect()  # to force 'del' immediate effect
-    assert mark not in ps_aux(), "The test process should not be running at this point."
+    assert mark not in running_command_lines(), (
+        "The test process should not be running at this point."
+    )
 
 
 def test_executor_raises_if_process_exits_with_error() -> None:
@@ -183,7 +228,9 @@ def test_executor_raises_if_process_exits_with_error() -> None:
     should raise an exception.
     """
     error_code = 12
-    failing_executor = Executor(["bash", "-c", f"exit {error_code!s}"], timeout=5)
+    failing_executor = Executor(
+        [sys.executable, "-c", f"raise SystemExit({error_code!s})"], timeout=5
+    )
     failing_executor.pre_start_check = mock.Mock(return_value=False)  # type: ignore
     # After-start check will keep returning False to let the process terminate.
     failing_executor.after_start_check = mock.Mock(return_value=False)  # type: ignore
@@ -208,7 +255,7 @@ def test_executor_ignores_processes_exiting_with_0() -> None:
     """
     # We execute a process that will return zero. In order to give the process
     # enough time to return we keep the polling loop spinning for a second.
-    executor = Executor(["bash", "-c", "exit 0"], timeout=1.0)
+    executor = Executor([sys.executable, "-c", "raise SystemExit(0)"], timeout=1.0)
     executor.pre_start_check = mock.Mock(return_value=False)  # type: ignore
     executor.after_start_check = mock.Mock(return_value=False)  # type: ignore
 
@@ -236,6 +283,7 @@ def test_executor_methods_returning_self() -> None:
     assert SimpleExecutor(SLEEP_300).start().stop().output
 
 
+@needs_posix_daemon
 @pytest.mark.xdist_group(name="sample-deamon")
 def test_mirakuru_cleanup() -> None:
     """Test if cleanup_subprocesses is fired correctly on python exit."""
@@ -250,7 +298,7 @@ def test_mirakuru_cleanup() -> None:
                   '
     """
     check_output(shlex.split(cmd.replace("\n", "")))
-    assert SAMPLE_DAEMON_PATH not in ps_aux()
+    assert SAMPLE_DAEMON_PATH not in running_command_lines()
 
 
 def test_remaining_timeout() -> None:
