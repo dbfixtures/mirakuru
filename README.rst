@@ -350,6 +350,8 @@ Windows support
 
 The Windows column in the executors table under `Usage`_ shows which executors run on Windows.
 
-On Windows, stopping or killing a process ends it at once with ``TerminateProcess``, so it
-can't catch the signal to shut down gracefully. Its exit code is then the signal's number,
-not the negative number POSIX gives, and ``stop()`` expects that.
+On Windows, stopping or killing a process with a signal such as the default ``SIGTERM`` ends
+it at once with ``TerminateProcess``, so it can't shut down gracefully. Its exit code is then
+the signal's number, not the negative number POSIX gives, and ``stop()`` expects that.
+Console control events such as ``CTRL_BREAK_EVENT``, which a process can handle to shut down
+gracefully, aren't supported yet.
