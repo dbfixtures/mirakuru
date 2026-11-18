@@ -103,35 +103,40 @@ def signal_process_tree(pid: int, sig: int) -> None:
     :param pid: process identifier (PID) of the process at the root of the tree
     :param sig: signal to send
     """
-    descendants = []
-    if psutil is not None:
-        try:
-            descendants = psutil.Process(pid).children(recursive=True)
-        except psutil.NoSuchProcess:
-            pass
+    descendants = _list_descendants(pid)
 
     if sys.platform == "win32":
+        signalled_one_by_one = descendants
         _send_signal(pid, sig)
     else:
         # The process was started in a session of its own, so its process
         # group ID is its PID. Group members get the signal once, through
         # the group.
-        outside_group = []
+        signalled_one_by_one = []
         for descendant in descendants:
             try:
                 if os.getpgid(descendant.pid) != pid:
-                    outside_group.append(descendant)
+                    signalled_one_by_one.append(descendant)
             except ProcessLookupError:
                 pass
             except PermissionError:
-                outside_group.append(descendant)
-        descendants = outside_group
+                signalled_one_by_one.append(descendant)
         _send_signal(-pid, sig)
 
-    for descendant in descendants:
+    for descendant in signalled_one_by_one:
         # A descendant that has exited since listing may have its PID reused.
         if descendant.is_running():
             _send_signal(descendant.pid, sig)
+
+
+def _list_descendants(pid: int) -> list[Any]:
+    """Return the descendants of a process, or none without psutil."""
+    if psutil is None:
+        return []
+    try:
+        return list(psutil.Process(pid).children(recursive=True))
+    except psutil.NoSuchProcess:
+        return []
 
 
 def _send_signal(target: int, sig: int) -> None:
