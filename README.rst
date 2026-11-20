@@ -353,5 +353,22 @@ The Windows column in the executors table under `Usage`_ shows which executors r
 On Windows, stopping or killing a process with a signal such as the default ``SIGTERM`` ends
 it at once with ``TerminateProcess``, so it can't shut down gracefully. Its exit code is then
 the signal's number, not the negative number POSIX gives, and ``stop()`` expects that.
-Console control events such as ``CTRL_BREAK_EVENT``, which a process can handle to shut down
-gracefully, aren't supported yet.
+
+To let the process shut down gracefully, stop it with ``signal.CTRL_BREAK_EVENT``:
+
+.. code-block:: python
+
+    import signal
+
+    from mirakuru import SimpleExecutor
+
+    executor = SimpleExecutor(["python", "server.py"], stop_signal=signal.CTRL_BREAK_EVENT)
+
+The event goes to the process's group, which holds its descendants unless they started a group
+of their own, and a Python process handles it as ``signal.SIGBREAK``. A process that doesn't
+handle it exits with ``STATUS_CONTROL_C_EXIT`` (``0xC000013A``), which ``stop()`` expects, and
+a process that does may exit with ``0`` as well. A PyPy process exits on the event only through
+a ``signal.SIGBREAK`` handler. A Python handler runs only once the main thread is not blocked,
+for example in ``time.sleep()``. Leftover processes found after the stop are
+ended with ``TerminateProcess``. The executor's process must share the console of the Python
+process running mirakuru, as it does by default.
