@@ -7,6 +7,7 @@ import signal
 import sys
 import time
 import uuid
+from pathlib import Path
 from typing import NoReturn
 from unittest.mock import MagicMock, patch
 
@@ -166,6 +167,69 @@ def test_stop__signals_process_group_member_outside_tree() -> None:
     while mark in running_command_lines():
         assert time.time() < deadline, "The worker process outlived the executor."
         time.sleep(0.1)
+
+
+windows_only = pytest.mark.skipif(
+    sys.platform != "win32", reason="Console control events exist on Windows only."
+)
+
+
+@windows_only
+def test_stop__ctrl_break_event() -> None:
+    """Check that a process ended by a console control event stops without an error."""
+    # Given
+    executor = SimpleExecutor(
+        SLEEP_300,
+        stop_signal=signal.CTRL_BREAK_EVENT,  # type: ignore[attr-defined,unused-ignore]
+    ).start()
+
+    # When
+    executor.stop()
+
+    # Then
+    assert executor.running() is False
+
+
+@windows_only
+def test_stop__ctrl_break_event_lets_process_tree_shut_down(tmp_path: Path) -> None:
+    """Check that the process and its descendants handle the event and exit on their own."""
+    # Given
+    ready_path = tmp_path / "ready"
+    stopped_path = tmp_path / "stopped"
+    child_code = (
+        "import pathlib, signal, sys, time\n"
+        "def stop(*_):\n"
+        f"    pathlib.Path({str(stopped_path)!r}).touch()\n"
+        "    sys.exit(0)\n"
+        "signal.signal(signal.SIGBREAK, stop)\n"
+        f"pathlib.Path({str(ready_path)!r}).touch()\n"
+        "while True:\n"
+        "    time.sleep(0.1)\n"
+    )
+    root_code = (
+        "import signal, subprocess, sys, time\n"
+        "def stop(*_):\n"
+        "    child.wait()\n"
+        "    sys.exit(0)\n"
+        "signal.signal(signal.SIGBREAK, stop)\n"
+        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}])\n"
+        "while True:\n"
+        "    time.sleep(0.1)\n"
+    )
+    executor = SimpleExecutor(
+        [sys.executable, "-c", root_code],
+        stop_signal=signal.CTRL_BREAK_EVENT,  # type: ignore[attr-defined,unused-ignore]
+    ).start()
+    deadline = time.time() + 10
+    while not ready_path.exists():
+        assert time.time() < deadline, "The child process did not start."
+        time.sleep(0.1)
+
+    # When
+    executor.stop()
+
+    # Then
+    assert stopped_path.exists()
 
 
 def test_signal_process_tree__skips_exited_descendant() -> None:

@@ -67,6 +67,9 @@ elif sys.platform == "win32":
     # one that no longer exists is an invalid parameter.
     IGNORED_ERROR_CODES = [errno.ESRCH, errno.EACCES, errno.EINVAL]
 
+STATUS_CONTROL_C_EXIT = 0xC000013A
+"""Exit code of a Windows process that a console control event ended by default."""
+
 # Type variables used for self in functions returning self, so it's correctly
 # typed in derived classes.
 SimpleExecutorType = TypeVar("SimpleExecutorType", bound="SimpleExecutor")
@@ -98,11 +101,19 @@ def signal_process_tree(pid: int, sig: int) -> None:
 
     On POSIX the signal goes to the process group as well, which also reaches
     members whose parent has exited and so are no longer descendants.
+    On Windows a console control event goes only to the process group, which
+    holds the descendants unless they started a group of their own.
     Processes that exit before they get the signal are skipped.
 
     :param pid: process identifier (PID) of the process at the root of the tree
     :param sig: signal to send
     """
+    if _is_console_control_event(sig):
+        # The process was started as the leader of a process group of its
+        # own, whose ID is its PID.
+        _send_signal(pid, sig)
+        return
+
     descendants = _list_descendants(pid)
 
     if sys.platform == "win32":
@@ -127,6 +138,23 @@ def signal_process_tree(pid: int, sig: int) -> None:
         # A descendant that has exited since listing may have its PID reused.
         if descendant.is_running():
             _send_signal(descendant.pid, sig)
+
+
+if sys.platform == "win32":
+
+    def _is_console_control_event(sig: int) -> bool:
+        """Tell whether the signal is a console control event.
+
+        `os.kill` sends such an event to a process group rather than to a
+        single process.
+        """
+        return sig == signal.CTRL_BREAK_EVENT
+
+else:
+
+    def _is_console_control_event(sig: int) -> bool:
+        """Tell whether the signal is a console control event, which POSIX lacks."""
+        return False
 
 
 def _list_descendants(pid: int) -> list[Any]:
@@ -176,13 +204,15 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
             or stop.
         :param sleep: how often to check for start/stop condition
         :param stop_signal: signal used to stop a process run by the executor.
-            default is `signal.SIGTERM`
+            default is `signal.SIGTERM`. On Windows, `signal.CTRL_BREAK_EVENT`
+            lets the process shut down gracefully.
         :param kill_signal: signal used to kill a process run by the executor.
             default is `signal.SIGKILL` (`signal.SIGTERM` on Windows)
         :param expected_returncode: expected exit code.
             default is None, which means, Executor will determine the return
             code based on signal sent: ``-signal`` on POSIX and ``signal``
-            on Windows.
+            on Windows, or ``STATUS_CONTROL_C_EXIT`` there after
+            `signal.CTRL_BREAK_EVENT`.
         :param envvars: Additional environment variables
         :param stdin: file descriptor for stdin
         :param stdout: file descriptor for stdout
@@ -369,14 +399,17 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         some daemons fired by subprocess may still be running.
 
         :param int sig: signal used to stop process run by executor.
+            A console control event, which goes to a process group, is
+            replaced with `SIGKILL`, as the leftovers need not lead a group.
         :return: process ids (pids) of killed processes
         :rtype: set
         """
+        leftover_signal = SIGKILL if _is_console_control_event(sig) else sig
         pids = processes_with_env(ENV_UUID, self._uuid)
         for pid in pids:
             LOG.debug("Killing process %d ...", pid)
             try:
-                os.kill(pid, sig)
+                os.kill(pid, leftover_signal)
             except OSError as err:
                 if err.errno in IGNORED_ERROR_CODES:
                     # the process has died before we tried to kill it.
@@ -413,7 +446,10 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if stop_signal is None:
             stop_signal = self._stop_signal
 
-        signal_process_tree(self.process.pid, stop_signal)
+        # Windows doesn't document where a console control event goes once no
+        # process is left in its group, so none is sent then.
+        if self.running() or not _is_console_control_event(stop_signal):
+            signal_process_tree(self.process.pid, stop_signal)
 
         def process_stopped() -> bool:
             """Return True only only when self.process is not running."""
@@ -439,8 +475,15 @@ class SimpleExecutor:  # pylint:disable=too-many-instance-attributes
         if expected_returncode is None:
             # On POSIX a process ended by a signal exits with -SIGNAL:
             # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
-            # On Windows, `TerminateProcess` exits with the number it was given.
-            expected_returncode = stop_signal if sys.platform == "win32" else -stop_signal
+            # On Windows, `TerminateProcess` exits with the number it was given,
+            # and a process ends on a console control event by default with
+            # STATUS_CONTROL_C_EXIT.
+            if _is_console_control_event(stop_signal):
+                expected_returncode = STATUS_CONTROL_C_EXIT
+            elif sys.platform == "win32":
+                expected_returncode = stop_signal
+            else:
+                expected_returncode = -stop_signal
 
         if exit_code and exit_code != expected_returncode:
             raise ProcessFinishedWithError(self, exit_code)

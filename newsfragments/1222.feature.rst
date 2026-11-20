@@ -1,0 +1,1 @@
+On Windows, stop a process gracefully by passing ``signal.CTRL_BREAK_EVENT`` as the stop signal. The event goes to the process group once, and ``stop()`` then expects the exit code ``STATUS_CONTROL_C_EXIT`` (``0xC000013A``), which a process gets when it doesn't handle the event.
