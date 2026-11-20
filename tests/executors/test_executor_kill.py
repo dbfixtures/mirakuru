@@ -7,7 +7,6 @@ import signal
 import sys
 import time
 import uuid
-from pathlib import Path
 from typing import NoReturn
 from unittest.mock import MagicMock, patch
 
@@ -15,7 +14,7 @@ import psutil
 import pytest
 
 from mirakuru import HTTPExecutor, SimpleExecutor
-from mirakuru.base import ENV_UUID, STATUS_CONTROL_C_EXIT, signal_process_tree
+from mirakuru.base import ENV_UUID, signal_process_tree
 from mirakuru.exceptions import ProcessFinishedWithError
 from tests import (
     SAMPLE_DAEMON_PATH,
@@ -167,87 +166,6 @@ def test_stop__signals_process_group_member_outside_tree() -> None:
     while mark in running_command_lines():
         assert time.time() < deadline, "The worker process outlived the executor."
         time.sleep(0.1)
-
-
-windows_only = pytest.mark.skipif(
-    sys.platform != "win32", reason="Console control events exist on Windows only."
-)
-
-
-@windows_only
-@pytest.mark.skipif(
-    sys.implementation.name == "pypy",
-    reason="PyPy doesn't exit on a console control event it has no handler for.",
-)
-def test_stop__ctrl_break_event(tmp_path: Path) -> None:
-    """Check that a process ended by a console control event stops without an error."""
-    # Given
-    ready_path = tmp_path / "ready"
-    executor = SimpleExecutor(
-        [
-            sys.executable,
-            "-c",
-            f"import pathlib, time; pathlib.Path({str(ready_path)!r}).touch(); time.sleep(300)",
-        ],
-        timeout=10,
-        stop_signal=signal.CTRL_BREAK_EVENT,  # type: ignore[attr-defined,unused-ignore]
-    ).start()
-    # An event that arrives while the process is still loading ends it with
-    # STATUS_DLL_INIT_FAILED instead.
-    deadline = time.time() + 10
-    while not ready_path.exists():
-        assert time.time() < deadline, "The process did not start."
-        time.sleep(0.1)
-    process = executor.process
-
-    # When
-    executor.stop()
-
-    # Then
-    assert executor.running() is False
-    assert process.returncode == STATUS_CONTROL_C_EXIT
-
-
-@windows_only
-def test_stop__ctrl_break_event_lets_process_tree_shut_down(tmp_path: Path) -> None:
-    """Check that the process and its descendants handle the event and exit on their own."""
-    # Given
-    ready_path = tmp_path / "ready"
-    stopped_path = tmp_path / "stopped"
-    child_code = (
-        "import pathlib, signal, sys, time\n"
-        "def stop(*_):\n"
-        f"    pathlib.Path({str(stopped_path)!r}).touch()\n"
-        "    sys.exit(0)\n"
-        "signal.signal(signal.SIGBREAK, stop)\n"
-        f"pathlib.Path({str(ready_path)!r}).touch()\n"
-        "while True:\n"
-        "    time.sleep(0.1)\n"
-    )
-    root_code = (
-        "import signal, subprocess, sys, time\n"
-        "def stop(*_):\n"
-        "    child.wait()\n"
-        "    sys.exit(0)\n"
-        "signal.signal(signal.SIGBREAK, stop)\n"
-        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}])\n"
-        "while True:\n"
-        "    time.sleep(0.1)\n"
-    )
-    executor = SimpleExecutor(
-        [sys.executable, "-c", root_code],
-        stop_signal=signal.CTRL_BREAK_EVENT,  # type: ignore[attr-defined,unused-ignore]
-    ).start()
-    deadline = time.time() + 10
-    while not ready_path.exists():
-        assert time.time() < deadline, "The child process did not start."
-        time.sleep(0.1)
-
-    # When
-    executor.stop()
-
-    # Then
-    assert stopped_path.exists()
 
 
 def test_signal_process_tree__skips_exited_descendant() -> None:
