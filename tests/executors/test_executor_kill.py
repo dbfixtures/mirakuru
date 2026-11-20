@@ -15,7 +15,7 @@ import psutil
 import pytest
 
 from mirakuru import HTTPExecutor, SimpleExecutor
-from mirakuru.base import ENV_UUID, signal_process_tree
+from mirakuru.base import ENV_UUID, STATUS_CONTROL_C_EXIT, signal_process_tree
 from mirakuru.exceptions import ProcessFinishedWithError
 from tests import (
     SAMPLE_DAEMON_PATH,
@@ -179,15 +179,21 @@ def test_stop__ctrl_break_event() -> None:
     """Check that a process ended by a console control event stops without an error."""
     # Given
     executor = SimpleExecutor(
-        SLEEP_300,
+        [sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(300)"],
+        timeout=10,
         stop_signal=signal.CTRL_BREAK_EVENT,  # type: ignore[attr-defined,unused-ignore]
     ).start()
+    # An event that arrives while the process is still loading ends it with
+    # STATUS_DLL_INIT_FAILED instead.
+    assert executor.output().readline() == "ready\n"
+    process = executor.process
 
     # When
     executor.stop()
 
     # Then
     assert executor.running() is False
+    assert process.returncode == STATUS_CONTROL_C_EXIT
 
 
 @windows_only
