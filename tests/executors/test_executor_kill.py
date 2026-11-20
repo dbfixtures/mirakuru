@@ -175,17 +175,29 @@ windows_only = pytest.mark.skipif(
 
 
 @windows_only
-def test_stop__ctrl_break_event() -> None:
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy",
+    reason="PyPy doesn't exit on a console control event it has no handler for.",
+)
+def test_stop__ctrl_break_event(tmp_path: Path) -> None:
     """Check that a process ended by a console control event stops without an error."""
     # Given
+    ready_path = tmp_path / "ready"
     executor = SimpleExecutor(
-        [sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(300)"],
+        [
+            sys.executable,
+            "-c",
+            f"import pathlib, time; pathlib.Path({str(ready_path)!r}).touch(); time.sleep(300)",
+        ],
         timeout=10,
         stop_signal=signal.CTRL_BREAK_EVENT,  # type: ignore[attr-defined,unused-ignore]
     ).start()
     # An event that arrives while the process is still loading ends it with
     # STATUS_DLL_INIT_FAILED instead.
-    assert executor.output().readline() == "ready\n"
+    deadline = time.time() + 10
+    while not ready_path.exists():
+        assert time.time() < deadline, "The process did not start."
+        time.sleep(0.1)
     process = executor.process
 
     # When

@@ -367,6 +367,8 @@ To let the process shut down gracefully, stop it with ``signal.CTRL_BREAK_EVENT`
 The event goes to the process's group, which holds its descendants unless they started a group
 of their own, and a Python process handles it as ``signal.SIGBREAK``. A process that doesn't
 handle it exits with ``STATUS_CONTROL_C_EXIT`` (``0xC000013A``), which ``stop()`` expects, and
-a process that does may exit with ``0`` as well. Leftover processes found after the stop are
+a process that does may exit with ``0`` as well. A PyPy process exits on the event only through
+a ``signal.SIGBREAK`` handler. A Python handler runs only once the main thread is not blocked,
+for example in ``time.sleep()``. Leftover processes found after the stop are
 ended with ``TerminateProcess``. The executor's process must share the console of the Python
 process running mirakuru, as it does by default.
