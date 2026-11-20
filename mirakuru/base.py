@@ -140,20 +140,15 @@ def signal_process_tree(pid: int, sig: int) -> None:
             _send_signal(descendant.pid, sig)
 
 
-if sys.platform == "win32":
+def _is_console_control_event(sig: int) -> bool:
+    """Tell whether the signal is a Windows console control event.
 
-    def _is_console_control_event(sig: int) -> bool:
-        """Tell whether the signal is a console control event.
-
-        `os.kill` sends such an event to a process group rather than to a
-        single process.
-        """
+    `os.kill` sends such an event to a process group rather than to a single
+    process.
+    """
+    if sys.platform == "win32":
         return sig == signal.CTRL_BREAK_EVENT
-
-else:
-
-    def _is_console_control_event(sig: int) -> bool:
-        """Tell whether the signal is a console control event, which POSIX lacks."""
+    else:
         return False
 
 
