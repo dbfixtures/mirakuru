@@ -1,0 +1,1 @@
+Executor exceptions build their message in the constructor, so ``str(exception)`` and ``exception.args`` carry it.

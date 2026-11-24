@@ -9,18 +9,26 @@ if TYPE_CHECKING:  # pragma: no cover
 class ExecutorError(Exception):
     """Base exception for executor failures."""
 
-    def __init__(self, executor: "SimpleExecutor") -> None:
+    _MESSAGE = "Executor {executor} failed"
+
+    def __init__(self, executor: "SimpleExecutor", message: str | None = None) -> None:
         """Exception initialization.
 
         :param mirakuru.base.SimpleExecutor executor: for which exception
             occurred
+        :param str message: exception message, formatted from ``_MESSAGE``
+            when not given
         """
-        super().__init__(self)
         self.executor = executor
+        super().__init__(
+            message if message is not None else self._MESSAGE.format(executor=executor)
+        )
 
 
 class TimeoutExpired(ExecutorError):
     """Is raised when the timeout expires while starting an executor."""
+
+    _MESSAGE = "Executor {executor} timed out after {timeout} seconds"
 
     def __init__(self, executor: "SimpleExecutor", timeout: float) -> None:
         """Exception initialization with an extra ``timeout`` argument.
@@ -29,16 +37,8 @@ class TimeoutExpired(ExecutorError):
             occurred
         :param int timeout: timeout for which exception occurred
         """
-        super().__init__(executor)
         self.timeout = timeout
-
-    def __str__(self) -> str:
-        """Return Exception's string representation.
-
-        :returns: string representation
-        :rtype: str
-        """
-        return f"Executor {self.executor} timed out after {self.timeout} seconds"
+        super().__init__(executor, self._MESSAGE.format(executor=executor, timeout=timeout))
 
 
 class AlreadyRunning(ExecutorError):
@@ -48,24 +48,26 @@ class AlreadyRunning(ExecutorError):
     same configuration we can't bind to same port.
     """
 
-    def __str__(self) -> str:
-        """Return Exception's string representation.
+    _MESSAGE = (
+        "Executor {executor} seems to be already running. "
+        "It looks like the previous executor process hasn't been "
+        "terminated or killed."
+    )
+    _PORT_MESSAGE = (
+        " Also there might be some completely different service listening on {port} port."
+    )
 
-        :returns: string representation
-        :rtype: str
+    def __init__(self, executor: "SimpleExecutor") -> None:
+        """Exception initialization, adding the port hint when one is configured.
+
+        :param mirakuru.base.SimpleExecutor executor: for which exception
+            occurred
         """
-        port = getattr(self.executor, "port", None)
-        return (
-            f"Executor {self.executor} seems to be already running. "
-            f"It looks like the previous executor process hasn't been "
-            f"terminated or killed."
-            + (
-                ""
-                if port is None
-                else f" Also there might be some completely "
-                f"different service listening on {port} port."
-            )
-        )
+        message = self._MESSAGE.format(executor=executor)
+        port = getattr(executor, "port", None)
+        if port is not None:
+            message += self._PORT_MESSAGE.format(port=port)
+        super().__init__(executor, message)
 
 
 class ProcessExitedWithError(ExecutorError):
@@ -76,6 +78,11 @@ class ProcessExitedWithError(ExecutorError):
     exit with 0 in case of successful daemonization.
     """
 
+    _MESSAGE = (
+        "The process invoked by the {executor} executor has "
+        "exited with a non-zero code: {exit_code}."
+    )
+
     def __init__(self, executor: "SimpleExecutor", exit_code: int) -> None:
         """Exception initialization with an extra ``exit_code`` argument.
 
@@ -83,19 +90,8 @@ class ProcessExitedWithError(ExecutorError):
             occurred
         :param int exit_code: code the subprocess exited with
         """
-        super().__init__(executor)
         self.exit_code = exit_code
-
-    def __str__(self) -> str:
-        """Return Exception's string representation.
-
-        :returns: string representation
-        :rtype: str
-        """
-        return (
-            f"The process invoked by the {self.executor} executor has "
-            f"exited with a non-zero code: {self.exit_code}."
-        )
+        super().__init__(executor, self._MESSAGE.format(executor=executor, exit_code=exit_code))
 
 
 class ProcessFinishedWithError(ProcessExitedWithError):
